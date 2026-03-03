@@ -1,0 +1,123 @@
+version: "2"
+linters:
+  enable:
+    - goconst
+    - misspell
+    - nakedret
+    - prealloc
+    - revive
+    - unconvert
+    - unparam
+    - nestif
+    - tagalign
+    - mnd
+    - gosec
+    - govet
+    - dupl
+    - dupword
+    - errorlint
+    - exhaustive
+    - forbidigo
+    - funcorder
+    - funlen
+    - gocognit
+    - goconst
+    - gocritic
+    - godot
+    - godox
+    - govet
+    - iface
+    - lll
+    - nolintlint
+    - staticcheck
+    - tagalign
+    - testpackage
+    - usestdlibvars
+    - usetesting
+    - unconvert
+    - unconvert
+    - unused
+    - whitespace
+    - wsl_v5
+    - loggercheck
+    - dogsled
+    - canonicalheader
+    - asciicheck
+    - asasalint
+    - errname
+    - fatcontext
+    - exptostd
+    - intrange
+    - mirror
+    - nilerr
+    - musttag
+    - nilnil
+    - errchkjson
+    - errcheck
+    - unqueryvet
+    - paralleltest
+    - tparallel
+    - thelper
+    - sloglint
+    - predeclared
+    - reassign
+  settings:
+    misspell:
+      locale: UK
+    revive:
+      rules:
+        - name: redundant-build-tag
+    gocognit:
+      min-complexity: 15
+    lll:
+      line-length: 80
+    tagalign:
+      sort: false
+    nilnil:
+      detect-opposite: true
+    errchkjson:
+      check-error-free-encoding: true
+    errcheck:
+      exclude-functions:
+        # these should be covered by errchkjson
+        - encoding/json.Marshal
+        - encoding/json.MarshalIndent
+    sloglint:
+      no-global: "all"
+      static-msg: true
+      msg-style: lowercased
+      key-naming-case: snake
+      forbidden-keys:
+        # these are reserved by JSONHandler
+        - time
+        - level
+        - msg
+        - source
+      args-on-sep-lines: true
+  exclusions:
+    generated: lax
+    rules:
+      - path: (.+)\.go$
+        text: G104
+      - path: _test.go
+        linters:
+          - funlen
+          - lll
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - golines
+    - gci
+  exclusions:
+    generated: lax
+  settings:
+    golines:
+      max-len: 80
+    gci:
+      sections:
+        - standard
+        - default
+        - localmodule
