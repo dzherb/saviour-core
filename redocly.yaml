@@ -1,0 +1,69 @@
+extends:
+  - recommended
+
+# see https://redocly.com/docs/cli/rules/built-in-rules
+rules:
+  info-license: off
+  operation-2xx-response: error
+  operation-description: warn
+  operation-operationId: error
+  array-parameter-serialization:
+    severity: error
+  boolean-parameter-prefixes:
+    severity: error
+    prefixes: [ "can", "is", "has" ]
+  no-invalid-parameter-examples:
+    severity: error
+  path-not-include-query: error
+  no-ambiguous-paths: error
+  no-http-verbs-in-paths:
+    severity: error
+    splitIntoWords: true
+  path-segment-plural:
+    severity: error
+    ignoreLastPathSegment: true
+    exceptions:
+      - auth
+  paths-kebab-case: error
+  component-name-unique:
+    severity: error
+    schemas: error
+    parameters: error
+    responses: error
+    requestBodies: error
+  no-required-schema-properties-undefined: error
+  request-mime-type:
+    severity: error
+    allowedValues:
+      - application/json
+  response-mime-type:
+    severity: error
+    allowedValues:
+      - application/json
+  # We'd like to include this rule, but currently
+  # it does not consider the "format" property...
+  # required-string-property-missing-min-length: error
+  no-server-example.com: off
+  no-duplicated-tag-names: error
+  operation-singular-tag: error
+  operation-tag-defined: error
+
+  # Custom rules
+
+  rule/version-semver:
+    subject:
+      type: Info
+      property: version
+    assertions:
+      pattern: /[0-9]\.[0-9]\.[0-9]/
+    message: API version must be in SemVer format
+
+  rule/require-required:
+    subject:
+      type: RequestBody
+      property: required
+    assertions:
+      defined: true
+      const: true
+    # motivation: OAPIValidator middleware otherwise skips validation on empty body
+    message: "Request body should have \"required: true\""

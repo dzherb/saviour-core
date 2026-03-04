@@ -62,8 +62,6 @@ linters:
     - predeclared
     - reassign
   settings:
-    misspell:
-      locale: UK
     revive:
       rules:
         - name: redundant-build-tag

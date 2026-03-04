@@ -1,0 +1,19 @@
+{
+  "app": {
+    "instance": "dev_local",
+    "startup_timeout": "10s",
+    "shutdown_timeout": "60s"
+  },
+  "logger": {
+    "level": "debug"
+  },
+  "server": {
+    "host": "localhost",
+    "port": 8080,
+    "read_header_timeout": "10s",
+    "api": {
+      "response_timeout": "10s",
+      "debug_log_processed_requests": true
+    }
+  }
+}

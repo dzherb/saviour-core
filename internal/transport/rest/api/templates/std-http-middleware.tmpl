@@ -1,0 +1,320 @@
+// HandlerInterfaceWrapper converts contexts to parameters.
+type HandlerInterfaceWrapper struct {
+    handler HandlerInterface
+    options Options
+}
+
+{{range .}}
+{{$opid := .OperationId}}
+
+// {{$opid}} operation middleware
+func (hiw *HandlerInterfaceWrapper) {{$opid}}(w http.ResponseWriter, r *http.Request) {
+    {{if or .RequiresParamObject (gt (len .PathParams) 0) }}
+    var err error
+    {{end}}
+
+    {{range .PathParams}}// ------------- Path parameter "{{.ParamName}}" -------------
+    var {{$varName := .GoVariableName}}{{$varName}} {{.TypeDef}}
+
+    {{if .IsPassThrough}}
+    {{$varName}} = r.PathValue("{{.ParamName}}")
+    {{end}}
+    {{if .IsJson}}
+    err = json.Unmarshal([]byte(r.PathValue("{{.ParamName}}")), &{{$varName}})
+    if err != nil {
+        hiw.options.RequestErrorHandlerFunc(w, r, &UnmarshalingParamError{ParamName: "{{.ParamName}}", Err: err})
+        return
+    }
+    {{end}}
+    {{if .IsStyled}}
+    err = runtime.BindStyledParameterWithOptions("{{.Style}}", "{{.ParamName}}", r.PathValue("{{.ParamName}}"), &{{$varName}}, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: {{.Explode}}, Required: {{.Required}}})
+    if err != nil {
+    hiw.options.RequestErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "{{.ParamName}}", Err: err})
+    return
+    }
+    {{end}}
+
+    {{end}}
+
+    {{if .RequiresParamObject}}
+    // Parameter object where we will unmarshal all parameters from the context
+    var params {{.OperationId}}Params
+
+    {{range $paramIdx, $param := .QueryParams}}
+    {{- if (or (or .Required .IsPassThrough) (or .IsJson .IsStyled)) -}}
+    // ------------- {{if .Required}}Required{{else}}Optional{{end}} query parameter "{{.ParamName}}" -------------
+    {{ end }}
+    {{ if (or (or .Required .IsPassThrough) .IsJson) }}
+    if paramValue := r.URL.Query().Get("{{.ParamName}}"); paramValue != "" {
+
+    {{if .IsPassThrough}}
+        params.{{.GoName}} = {{if .HasOptionalPointer}}&{{end}}paramValue
+    {{end}}
+
+    {{if .IsJson}}
+        var value {{.TypeDef}}
+        err = json.Unmarshal([]byte(paramValue), &value)
+        if err != nil {
+            hiw.options.RequestErrorHandlerFunc(w, r, &UnmarshalingParamError{ParamName: "{{.ParamName}}", Err: err})
+            return
+        }
+
+        params.{{.GoName}} = {{if .HasOptionalPointer}}&{{end}}value
+    {{end}}
+    }{{if .Required}} else {
+        hiw.options.RequestErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "{{.ParamName}}"})
+        return
+    }{{end}}
+    {{end}}
+    {{if .IsStyled}}
+    err = runtime.BindQueryParameter("{{.Style}}", {{.Explode}}, {{.Required}}, "{{.ParamName}}", r.URL.Query(), &params.{{.GoName}})
+    if err != nil {
+        hiw.options.RequestErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "{{.ParamName}}", Err: err})
+        return
+    }
+    {{end}}
+    {{end}}
+
+    {{if .HeaderParams}}
+        headers := r.Header
+
+        {{range .HeaderParams}}// ------------- {{if .Required}}Required{{else}}Optional{{end}} header parameter "{{.ParamName}}" -------------
+        if valueList, found := headers[http.CanonicalHeaderKey("{{.ParamName}}")]; found {
+            var {{.GoName}} {{.TypeDef}}
+            n := len(valueList)
+            if n != 1 {
+                hiw.options.RequestErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "{{.ParamName}}", Count: n})
+                return
+            }
+
+        {{if .IsPassThrough}}
+            params.{{.GoName}} = {{if .HasOptionalPointer}}&{{end}}valueList[0]
+        {{end}}
+
+        {{if .IsJson}}
+            err = json.Unmarshal([]byte(valueList[0]), &{{.GoName}})
+            if err != nil {
+            hiw.options.RequestErrorHandlerFunc(w, r, &UnmarshalingParamError{ParamName: "{{.ParamName}}", Err: err})
+            return
+            }
+        {{end}}
+
+        {{if .IsStyled}}
+            err = runtime.BindStyledParameterWithOptions("{{.Style}}", "{{.ParamName}}", valueList[0], &{{.GoName}}, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: {{.Explode}}, Required: {{.Required}}})
+            if err != nil {
+            hiw.options.RequestErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "{{.ParamName}}", Err: err})
+            return
+            }
+        {{end}}
+
+            params.{{.GoName}} = {{if .HasOptionalPointer}}&{{end}}{{.GoName}}
+
+        } {{if .Required}}else {
+            err := fmt.Errorf("Header parameter {{.ParamName}} is required, but not found")
+            hiw.options.RequestErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "{{.ParamName}}", Err: err})
+            return
+        }{{end}}
+
+        {{end}}
+    {{end}}
+
+    {{range .CookieParams}}
+    {
+        var cookie *http.Cookie
+
+        if cookie, err = r.Cookie("{{.ParamName}}"); err == nil {
+
+        {{- if .IsPassThrough}}
+        params.{{.GoName}} = {{if .HasOptionalPointer}}&{{end}}cookie.Value
+        {{end}}
+
+        {{- if .IsJson}}
+        var value {{.TypeDef}}
+        var decoded string
+        decoded, err := url.QueryUnescape(cookie.Value)
+        if err != nil {
+            err = fmt.Errorf("Error unescaping cookie parameter '{{.ParamName}}'")
+            hiw.options.RequestErrorHandlerFunc(w, r, &UnescapedCookieParamError{ParamName: "{{.ParamName}}", Err: err})
+            return
+        }
+
+        err = json.Unmarshal([]byte(decoded), &value)
+        if err != nil {
+            hiw.options.RequestErrorHandlerFunc(w, r, &UnmarshalingParamError{ParamName: "{{.ParamName}}", Err: err})
+            return
+        }
+
+        params.{{.GoName}} = {{if .HasOptionalPointer}}&{{end}}value
+        {{end}}
+
+        {{- if .IsStyled}}
+        var value {{.TypeDef}}
+        err = runtime.BindStyledParameterWithOptions("simple", "{{.ParamName}}", cookie.Value, &value, runtime.BindStyledParameterOptions{Explode: {{.Explode}}, Required: {{.Required}}})
+        if err != nil {
+            hiw.options.RequestErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "{{.ParamName}}", Err: err})
+            return
+        }
+        params.{{.GoName}} = {{if .HasOptionalPointer}}&{{end}}value
+        {{end}}
+
+        }
+
+        {{- if .Required}} else {
+        hiw.options.RequestErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "{{.ParamName}}"})
+        return
+        }
+        {{- end}}
+    }
+    {{end}}
+    {{end}}
+    var request {{$opid | ucFirst}}RequestObject
+
+    {{range .PathParams -}}
+        request.{{.GoName}} = {{.GoVariableName}}
+    {{end -}}
+
+    {{if .RequiresParamObject -}}
+        request.Params = params
+    {{end -}}
+
+    {{ if .HasMaskedRequestContentTypes -}}
+        request.ContentType = r.Header.Get("Content-Type")
+    {{end -}}
+
+    {{$multipleBodies := gt (len .Bodies) 1 -}}
+    {{range .Bodies -}}
+        {{if $multipleBodies}}if strings.HasPrefix(r.Header.Get("Content-Type"), "{{.ContentType}}") { {{end}}
+            {{if .IsJSON }}
+                var body {{$opid}}{{.NameTag}}RequestBody
+                if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+                    hiw.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+                    return
+                }
+                request.{{if $multipleBodies}}{{.NameTag}}{{end}}Body = &body
+            {{else if eq .NameTag "Formdata" -}}
+                if err := r.ParseForm(); err != nil {
+                    hiw.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode formdata: %w", err))
+                    return
+                }
+                var body {{$opid}}{{.NameTag}}RequestBody
+                if err := runtime.BindForm(&body, r.Form, nil, nil); err != nil {
+                    hiw.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't bind formdata: %w", err))
+                    return
+                }
+                request.{{if $multipleBodies}}{{.NameTag}}{{end}}Body = &body
+            {{else if eq .NameTag "Multipart" -}}
+                {{if eq .ContentType "multipart/form-data" -}}
+                if reader, err := r.MultipartReader(); err != nil {
+                    hiw.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
+                    return
+                } else {
+                    request.{{if $multipleBodies}}{{.NameTag}}{{end}}Body = reader
+                }
+                {{else -}}
+                if _, params, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil {
+                    hiw.options.RequestErrorHandlerFunc(w, r, err)
+                    return
+                } else if boundary := params["boundary"]; boundary == "" {
+                    hiw.options.RequestErrorHandlerFunc(w, r, http.ErrMissingBoundary)
+                    return
+                } else {
+                    request.{{if $multipleBodies}}{{.NameTag}}{{end}}Body = multipart.NewReader(r.Body, boundary)
+                }
+                {{end -}}
+            {{else if eq .NameTag "Text" -}}
+                data, err := io.ReadAll(r.Body)
+                if err != nil {
+                    hiw.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't read body: %w", err))
+                    return
+                }
+                body := {{$opid}}{{.NameTag}}RequestBody(data)
+                request.{{if $multipleBodies}}{{.NameTag}}{{end}}Body = &body
+            {{else -}}
+                request.{{if $multipleBodies}}{{.NameTag}}{{end}}Body = r.Body
+            {{end}}{{/* if eq .NameTag "JSON" */ -}}
+        {{if $multipleBodies}}}{{end}}
+    {{end}}{{/* range .Bodies */}}
+
+    response, err := hiw.handler.{{.OperationId}}(w, r, request)
+
+    if err != nil {
+        hiw.options.ResponseErrorHandlerFunc(w, r, err)
+        return
+    }
+
+    if response != nil {
+        if err := response.Visit{{$opid}}Response(w); err != nil {
+            hiw.options.ResponseErrorHandlerFunc(w, r, err)
+        }
+    }
+}
+{{end}}
+
+type UnescapedCookieParamError struct {
+    ParamName string
+    Err error
+}
+
+func (e *UnescapedCookieParamError) Error() string {
+    return fmt.Sprintf("error unescaping cookie parameter '%s'", e.ParamName)
+}
+
+func (e *UnescapedCookieParamError) Unwrap() error {
+    return e.Err
+}
+
+type UnmarshalingParamError struct {
+    ParamName string
+    Err error
+}
+
+func (e *UnmarshalingParamError) Error() string {
+    return fmt.Sprintf("Error unmarshaling parameter %s as JSON: %s", e.ParamName, e.Err.Error())
+}
+
+func (e *UnmarshalingParamError) Unwrap() error {
+    return e.Err
+}
+
+type RequiredParamError struct {
+    ParamName string
+}
+
+func (e *RequiredParamError) Error() string {
+    return fmt.Sprintf("Query argument %s is required, but not found", e.ParamName)
+}
+
+type RequiredHeaderError struct {
+    ParamName string
+    Err error
+}
+
+func (e *RequiredHeaderError) Error() string {
+    return fmt.Sprintf("Header parameter %s is required, but not found", e.ParamName)
+}
+
+func (e *RequiredHeaderError) Unwrap() error {
+    return e.Err
+}
+
+type InvalidParamFormatError struct {
+    ParamName string
+	    Err error
+}
+
+func (e *InvalidParamFormatError) Error() string {
+    return fmt.Sprintf("Invalid format for parameter %s: %s", e.ParamName, e.Err.Error())
+}
+
+func (e *InvalidParamFormatError) Unwrap() error {
+    return e.Err
+}
+
+type TooManyValuesForParamError struct {
+    ParamName string
+    Count int
+}
+
+func (e *TooManyValuesForParamError) Error() string {
+    return fmt.Sprintf("Expected one value for %s, got %d", e.ParamName, e.Count)
+}

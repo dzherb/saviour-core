@@ -1,0 +1,141 @@
+openapi: "3.0.0"
+info:
+  version: 0.0.1
+  title: Saviour API
+  description: "API reference"
+
+servers:
+  - url: http://localhost:8080/api
+
+security:
+  - BearerAuth: []
+
+x-error-responses:
+  validation-error-response: &validation-error-response
+    "400":
+      description: request validation failed error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ValidationErrorResponse"
+  not-found-error-response: &not-found-error-response
+    "404":
+      description: entity not found error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/EntityNotFoundErrorResponse"
+  server-error-response: &server-error-response
+    "500":
+      description: server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  timeout-error-response: &timeout-error-response
+    "504":
+      description: response timeout error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TimeoutErrorResponse"
+
+tags:
+  - name: health
+    description: API server's health operations
+
+paths:
+  "/ping":
+    get:
+      summary: Ping the API server
+      description: Can be used for a healthcheck
+      security: []
+      tags:
+        - health
+      operationId: ping
+      responses:
+        "200":
+          description: ping response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PingResponse"
+        <<: [
+          *timeout-error-response,
+          *server-error-response,
+        ]
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    PingResponse:
+      type: object
+      properties:
+        instance:
+          type: string
+          description: Name of the server instance
+        server_time:
+          type: string
+          format: date-time
+          description: Server time
+      required:
+        - instance
+        - server_time
+
+    ErrorResponse:
+      required: [ error ]
+      properties:
+        error:
+          type: object
+          required: [ type, status_code ]
+          properties:
+            type:
+              type: string
+              example: EXAMPLE_ERROR_TYPE
+              description: Identifier of the error type
+            status_code:
+              type: integer
+              format: int32
+              description: HTTP status code
+            message:
+              type: string
+              description: Error message
+              example: Error message
+
+    EntityNotFoundErrorResponse:
+      allOf:
+        - $ref: "#/components/schemas/ErrorResponse"
+        - type: object
+          properties:
+            error:
+              properties:
+                type:
+                  enum: [ ENTITY_NOT_FOUND ]
+                  example: ENTITY_NOT_FOUND
+
+    ValidationErrorResponse:
+      allOf:
+        - $ref: "#/components/schemas/ErrorResponse"
+        - type: object
+          properties:
+            error:
+              properties:
+                type:
+                  enum: [ VALIDATION_FAILED ]
+                  example: VALIDATION_FAILED
+
+    TimeoutErrorResponse:
+      allOf:
+        - $ref: "#/components/schemas/ErrorResponse"
+        - type: object
+          properties:
+            error:
+              properties:
+                type:
+                  enum: [ RESPONSE_TIMEOUT ]
+                  example: RESPONSE_TIMEOUT

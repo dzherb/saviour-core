@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+package: api
+generate:
+  std-http-server: true
+  models: true
+  embedded-spec: true
+output: api.gen.go
+output-options:
+  skip-prune: true
+  name-normalizer: ToCamelCaseWithInitialisms
+  overlay:
+    path: openapi.overlay.yaml
+  user-templates:
+    stdhttp/std-http-handler.tmpl: ./templates/std-http-handler.tmpl
+    stdhttp/std-http-interface.tmpl: ./templates/std-http-interface.tmpl
+    stdhttp/std-http-middleware.tmpl: ./templates/std-http-middleware.tmpl
+    request-bodies.tmpl: ./templates/request-bodies.tmpl

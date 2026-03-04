@@ -1,0 +1,40 @@
+// Handler creates http.Handler with routing matching OpenAPI spec.
+func Handler(hi HandlerInterface) http.Handler {
+  return HandlerWithOptions(hi, Options{})
+}
+
+// ServeMux is an abstraction of http.ServeMux.
+type ServeMux interface {
+	HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request))
+	ServeHTTP(w http.ResponseWriter, r *http.Request)
+}
+
+type Options struct {
+    BaseURL          string
+    BaseRouter       ServeMux
+    RequestErrorHandlerFunc  func(w http.ResponseWriter, r *http.Request, err error)
+    ResponseErrorHandlerFunc func(w http.ResponseWriter, r *http.Request, err error)
+}
+
+const (
+{{range .}}
+    {{.OperationId}}Path = "{{.Path | swaggerUriToStdHttpUri}}"{{end}}
+)
+
+// HandlerWithOptions creates http.Handler with additional options
+func HandlerWithOptions(hi HandlerInterface, options Options) http.Handler {
+	m := options.BaseRouter
+
+	if m == nil {
+		m = http.NewServeMux()
+	}
+{{if .}}
+	wrapper := HandlerInterfaceWrapper{
+		handler: hi,
+		options: options,
+	}
+{{end}}
+{{range .}}m.HandleFunc("{{.Method }} "+options.BaseURL+{{.OperationId}}Path, wrapper.{{.OperationId}})
+{{end}}
+	return m
+}
