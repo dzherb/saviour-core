@@ -33,6 +33,7 @@ func Run(cfgPaths []string) error {
 
 	instanceComponent := NewInstance(di)
 	dbComponent := NewDB(di)
+	repositoryComponent := NewRepository(di)
 	serverComponent := NewServer(di)
 
 	app := New(LogDependency.MustGet(di))
@@ -40,6 +41,7 @@ func Run(cfgPaths []string) error {
 	app.RegisterStartQueue(
 		instanceComponent,
 		dbComponent,
+		repositoryComponent,
 		serverComponent,
 	)
 

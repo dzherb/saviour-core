@@ -27,6 +27,10 @@ fmt:
 gen-server:
 	@go generate ./internal/transport/rest/api
 
+.PHONY: gen-queries
+gen-queries:
+	@go generate ./internal/repository/...
+
 .PHONY: gen-all
 gen-all:
 	@go generate ./...

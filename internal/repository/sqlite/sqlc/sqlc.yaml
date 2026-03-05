@@ -1,0 +1,28 @@
+# see: https://docs.sqlc.dev/en/latest/reference/config.html#go
+version: "2"
+sql:
+  - engine: "sqlite"
+    queries: "./sql"
+    schema: "../../../infra/sqlite/migrations"
+    gen:
+      go:
+        package: "sqlitequery"
+        out: "./gen"
+        initialisms:
+          - uuid
+        overrides:
+          - column: "users.uuid"
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"
+          - column: "users.created_at"
+            go_type:
+              import: "saviour/internal/repository/sqlite/sqlc"
+              type: "UnixTime"
+          - column: "users.updated_at"
+            go_type:
+              import: "saviour/internal/repository/sqlite/sqlc"
+              type: "UnixTime"
+          - column: "users.is_admin"
+            go_type:
+              type: "bool"

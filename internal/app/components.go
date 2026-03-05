@@ -10,6 +10,8 @@ import (
 
 	"saviour/internal/infra/sqlite"
 	"saviour/internal/logger"
+	"saviour/internal/repository"
+	sqliterepo "saviour/internal/repository/sqlite"
 	"saviour/internal/transport/rest"
 	"saviour/internal/transport/rest/handler"
 )
@@ -26,6 +28,12 @@ var (
 	InstanceDependency = DefineDependency[string]("instance")
 	LogDependency      = DefineDependency[*slog.Logger]("log")
 	DBDependency       = DefineDependency[*sql.DB]("db")
+
+	// Repositories
+
+	UserRepositoryDependency = DefineDependency[repository.UserRepository](
+		"repository.user",
+	)
 )
 
 type InstanceComponent struct {
@@ -166,6 +174,22 @@ func (c *DBComponent) Stop(_ context.Context) error {
 	if c.db != nil {
 		return c.db.Close()
 	}
+
+	return nil
+}
+
+type RepositoryComponent struct {
+	di *Container
+}
+
+func NewRepository(di *Container) *RepositoryComponent {
+	return &RepositoryComponent{di: di}
+}
+
+func (c *RepositoryComponent) Start(_ context.Context, cfg *koanf.Koanf) error {
+	db := DBDependency.MustGet(c.di)
+
+	UserRepositoryDependency.Set(c.di, sqliterepo.NewUserRepository(db))
 
 	return nil
 }
