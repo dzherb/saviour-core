@@ -32,12 +32,14 @@ func Run(cfgPaths []string) error {
 	_ = logComponent.Start(context.TODO(), cfg)
 
 	instanceComponent := NewInstance(di)
+	dbComponent := NewDB(di)
 	serverComponent := NewServer(di)
 
 	app := New(LogDependency.MustGet(di))
 
 	app.RegisterStartQueue(
 		instanceComponent,
+		dbComponent,
 		serverComponent,
 	)
 
@@ -45,6 +47,7 @@ func Run(cfgPaths []string) error {
 	// shutdown_timeout can be set to force stop the app after N second.
 	app.RegisterStopQueue(
 		serverComponent,
+		dbComponent,
 	)
 
 	return app.Run(ctx, cfg)

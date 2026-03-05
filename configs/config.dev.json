@@ -15,5 +15,9 @@
       "response_timeout": "10s",
       "debug_log_processed_requests": true
     }
+  },
+  "db": {
+    "engine": "sqlite",
+    "dsn": "file:sqlite.db?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
   }
 }

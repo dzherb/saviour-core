@@ -2,11 +2,13 @@ package app
 
 import (
 	"context"
+	"database/sql"
 	"log/slog"
 	"os"
 
 	"github.com/knadh/koanf/v2"
 
+	"saviour/internal/infra/sqlite"
 	"saviour/internal/logger"
 	"saviour/internal/transport/rest"
 	"saviour/internal/transport/rest/handler"
@@ -23,6 +25,7 @@ type Stopper interface {
 var (
 	InstanceDependency = DefineDependency[string]("instance")
 	LogDependency      = DefineDependency[*slog.Logger]("log")
+	DBDependency       = DefineDependency[*sql.DB]("db")
 )
 
 type InstanceComponent struct {
@@ -124,6 +127,44 @@ func (c *ServerComponent) Stop(ctx context.Context) error {
 		c.log.DebugContext(ctx, "shutting down http server")
 
 		return c.server.Shutdown(ctx)
+	}
+
+	return nil
+}
+
+type DBComponent struct {
+	di *Container
+
+	db *sql.DB
+}
+
+func NewDB(di *Container) *DBComponent {
+	return &DBComponent{
+		di: di,
+	}
+}
+
+func (c *DBComponent) Start(_ context.Context, cfg *koanf.Koanf) error {
+	sqliteCfg, err := sqliteConfig(cfg)
+	if err != nil {
+		return err
+	}
+
+	db, err := sqlite.NewDB(sqliteCfg)
+	if err != nil {
+		return err
+	}
+
+	c.db = db
+
+	DBDependency.Set(c.di, db)
+
+	return nil
+}
+
+func (c *DBComponent) Stop(_ context.Context) error {
+	if c.db != nil {
+		return c.db.Close()
 	}
 
 	return nil

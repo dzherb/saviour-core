@@ -7,6 +7,7 @@ import (
 	"github.com/knadh/koanf/v2"
 
 	"saviour/internal/infra/logger"
+	"saviour/internal/infra/sqlite"
 	"saviour/internal/transport/rest"
 )
 
@@ -105,4 +106,31 @@ func apiConfig(k *koanf.Koanf) rest.APIConfig {
 		ResponseTimeout:           k.Duration(responseTimeoutKey),
 		DebugLogProcessedRequests: k.Bool(debugLogProcessedRequestsKey),
 	}
+}
+
+const (
+	dbEngineSQLite = "sqlite"
+)
+
+func sqliteConfig(k *koanf.Koanf) (sqlite.Config, error) {
+	const (
+		dbEngineKey = "db.engine"
+		dbDSNKey    = "db.dsn"
+	)
+
+	var cfg sqlite.Config
+
+	if k.String(dbEngineKey) != dbEngineSQLite {
+		return cfg, valueNotValidError(
+			dbEngineKey,
+			"only "+dbEngineSQLite+" is supported",
+		)
+	}
+
+	cfg.DSN = k.String(dbDSNKey)
+	if cfg.DSN == "" {
+		return cfg, valueRequiredError(dbDSNKey)
+	}
+
+	return cfg, nil
 }
