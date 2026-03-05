@@ -9,6 +9,18 @@ import (
 	"saviour/internal/repository/sqlite/sqlc"
 )
 
+type Session struct {
+	UUID             uuid.UUID
+	CreatedAt        sqlc.UnixTime
+	UpdatedAt        sqlc.UnixTime
+	UserUUID         uuid.UUID
+	RefreshTokenHash string
+	RevokedAt        interface{}
+	LastRefreshAt    sqlc.UnixTime
+	UserAgent        string
+	IPLast           sqlc.IP
+}
+
 type User struct {
 	UUID         uuid.UUID
 	CreatedAt    sqlc.UnixTime

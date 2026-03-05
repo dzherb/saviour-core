@@ -10,19 +10,25 @@ sql:
         out: "./gen"
         initialisms:
           - uuid
+          - ip
         overrides:
-          - column: "users.uuid"
+          - db_type: "UUID_BLOB"
             go_type:
               import: "github.com/google/uuid"
               type: "UUID"
-          - column: "users.created_at"
+          - db_type: "UNIXTIME_INT"
             go_type:
               import: "saviour/internal/repository/sqlite/sqlc"
               type: "UnixTime"
-          - column: "users.updated_at"
+          - db_type: "UNIXTIME_INT"
+            nullable: true
             go_type:
               import: "saviour/internal/repository/sqlite/sqlc"
               type: "UnixTime"
-          - column: "users.is_admin"
+          - db_type: "BOOLEAN"
             go_type:
               type: "bool"
+          - db_type: "IP_BLOB"
+            go_type:
+              import: "saviour/internal/repository/sqlite/sqlc"
+              type: "IP"

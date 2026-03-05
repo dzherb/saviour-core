@@ -3,6 +3,9 @@ package sqliterepo
 import (
 	"context"
 	"database/sql"
+	"errors"
+
+	"github.com/google/uuid"
 
 	"saviour/internal/model"
 	"saviour/internal/repository"
@@ -23,13 +26,36 @@ func (r *UserRepository) CreateUser(
 	ctx context.Context,
 	params repository.CreateUserParams,
 ) (*model.User, error) {
+	if params.UUID == uuid.Nil {
+		params.UUID = uuid.Must(uuid.NewV7())
+	}
+
 	user, err := r.txAwareQueries(ctx).
 		CreateUser(
 			ctx,
 			sqlitequery.CreateUserParams(params),
 		)
-
 	if err != nil {
+		return nil, err
+	}
+
+	return mapUser(&user), nil
+}
+
+func (r *UserRepository) GetUserByUsername(
+	ctx context.Context,
+	username string,
+) (*model.User, error) {
+	user, err := r.txAwareQueries(ctx).
+		GetUserByUsername(
+			ctx,
+			username,
+		)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.Join(repository.ErrUserNotFound, err)
+		}
+
 		return nil, err
 	}
 
@@ -38,9 +64,10 @@ func (r *UserRepository) CreateUser(
 
 func mapUser(user *sqlitequery.User) *model.User {
 	return &model.User{
-		UUID:      user.UUID,
-		CreatedAt: user.CreatedAt.Time(),
-		Username:  user.Username,
-		IsAdmin:   user.IsAdmin,
+		UUID:         user.UUID,
+		CreatedAt:    user.CreatedAt.Time(),
+		Username:     user.Username,
+		PasswordHash: user.PasswordHash,
+		IsAdmin:      user.IsAdmin,
 	}
 }

@@ -7,10 +7,8 @@ import (
 	sqlitequery "saviour/internal/repository/sqlite/sqlc/gen"
 )
 
-type DBTX = sqlitequery.DBTX
-
 type baseRepository struct {
-	db DBTX
+	db repository.DBTX
 }
 
 func (r *baseRepository) txAwareQueries(
@@ -27,7 +25,7 @@ func (r *baseRepository) queries() *sqlitequery.Queries {
 	return sqlitequery.New(r.db)
 }
 
-func newRepository(db DBTX) baseRepository {
+func newRepository(db repository.DBTX) baseRepository {
 	return baseRepository{
 		db: db,
 	}

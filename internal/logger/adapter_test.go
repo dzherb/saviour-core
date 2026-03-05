@@ -7,13 +7,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"saviour/internal/logger"
-	"saviour/internal/testkit"
+	"saviour/internal/testkit/testmock"
 )
 
 func TestSlogToStdLog(t *testing.T) {
 	t.Parallel()
 
-	h := testkit.NewSlogHandlerMock()
+	h := testmock.NewSlogHandlerMock()
 	log := slog.New(h)
 
 	std := logger.SlogToStdLog(log, slog.LevelWarn)

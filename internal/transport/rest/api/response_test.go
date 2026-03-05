@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"saviour/internal/testkit"
+	"saviour/internal/testkit/testmock"
 	"saviour/internal/transport/rest/api"
 )
 
@@ -48,7 +48,7 @@ func TestWriteResponse(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
-			h := testkit.NewSlogHandlerMock()
+			h := testmock.NewSlogHandlerMock()
 			log := slog.New(h)
 
 			w := httptest.NewRecorder()

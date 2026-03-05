@@ -31,6 +31,10 @@ gen-server:
 gen-queries:
 	@go generate ./internal/repository/...
 
+.PHONY: gen-mocks
+gen-mocks:
+	@go generate ./internal/testkit/testmock
+
 .PHONY: gen-all
 gen-all:
 	@go generate ./...

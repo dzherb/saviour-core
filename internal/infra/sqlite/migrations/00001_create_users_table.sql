@@ -1,12 +1,12 @@
 -- +goose Up
 CREATE TABLE users (
-    uuid BLOB PRIMARY KEY,
-    created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-    updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+    uuid UUID_BLOB PRIMARY KEY,
+    created_at UNIXTIME_INT NOT NULL DEFAULT (unixepoch()),
+    updated_at UNIXTIME_INT NOT NULL DEFAULT (unixepoch()),
 
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    is_admin INTEGER NOT NULL DEFAULT 0 CHECK (is_admin IN (0,1))
+    is_admin BOOLEAN NOT NULL DEFAULT 0 CHECK (is_admin IN (0,1))
 ) WITHOUT ROWID;
 
 -- +goose StatementBegin

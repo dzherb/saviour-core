@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"saviour/internal/logger"
-	"saviour/internal/testkit"
+	"saviour/internal/testkit/testmock"
 	"saviour/internal/transport/rest/middleware"
 )
 
@@ -20,7 +20,7 @@ func TestRecover_BeforeWrite(t *testing.T) {
 		panic("test panic")
 	})
 
-	h := testkit.NewSlogHandlerMock()
+	h := testmock.NewSlogHandlerMock()
 	log := slog.New(h)
 
 	wrappedHandler := middleware.Recover(log)(handler)

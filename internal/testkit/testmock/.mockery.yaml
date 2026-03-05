@@ -1,0 +1,15 @@
+# see https://vektra.github.io/mockery/latest/configuration/
+template: testify
+dir: "."
+filename: "{{snakecase .InterfaceName}}_mock.go"
+pkgname: 'testmock'
+structname: '{{.Mock}}{{firstUpper .InterfaceName}}'
+formatter: gofmt
+packages:
+  saviour/internal/repository:
+    interfaces:
+      DBTX:
+        config:
+          structname: '{{.Mock}}DB'
+      UserRepository:
+      SessionRepository:
