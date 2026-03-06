@@ -48,7 +48,7 @@ func TestWriteResponse(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
-			h := testmock.NewSlogHandlerMock()
+			h := testmock.NewMockSlogHandler()
 			log := slog.New(h)
 
 			w := httptest.NewRecorder()

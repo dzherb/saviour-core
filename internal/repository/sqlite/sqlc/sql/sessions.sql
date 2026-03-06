@@ -10,12 +10,15 @@ VALUES (?, ?, ?, ?, sqlc.arg('IP')) RETURNING *;
 
 -- name: RefreshActiveSession :execrows
 UPDATE sessions
-SET refresh_token_hash = ?,
+SET refresh_token_hash = sqlc.arg('newRefreshTokenHash'),
     last_refresh_at = unixepoch(),
-    ip_last = sqlc.arg('IP')
-WHERE uuid = ?
+    ip_last = sqlc.arg('ip')
+WHERE uuid = sqlc.arg('uuid')
+  -- make sure a refresh token can only be used once
+  AND refresh_token_hash = sqlc.arg('refreshTokenHash')
+  -- and the session is not revoked
   AND revoked_at IS NULL
-  -- session is not expired
+  -- or expired
   AND last_refresh_at > (unixepoch() - CAST(sqlc.arg('refreshTTLInSec') AS INTEGER));
 
 -- name: RevokeSession :execrows

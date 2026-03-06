@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log/slog"
+	"net/netip"
 	"os"
 
 	"github.com/knadh/koanf/v2"
@@ -12,6 +13,7 @@ import (
 	"saviour/internal/logger"
 	"saviour/internal/repository"
 	sqliterepo "saviour/internal/repository/sqlite"
+	"saviour/internal/service/auth"
 	"saviour/internal/transport/rest"
 	"saviour/internal/transport/rest/handler"
 )
@@ -29,11 +31,14 @@ var (
 	LogDependency      = DefineDependency[*slog.Logger]("log")
 	DBDependency       = DefineDependency[*sql.DB]("db")
 
-	// Repositories
-
 	UserRepositoryDependency = DefineDependency[repository.UserRepository](
 		"repository.user",
 	)
+	SessionRepositoryDependency = DefineDependency[repository.SessionRepository](
+		"repository.session",
+	)
+
+	AuthServiceDependency = DefineDependency[*auth.Auth]("auth")
 )
 
 type InstanceComponent struct {
@@ -102,12 +107,19 @@ func (c *ServerComponent) Start(ctx context.Context, cfg *koanf.Koanf) error {
 
 	c.log = LogDependency.MustGet(c.di)
 	instance := InstanceDependency.MustGet(c.di)
+	authService := AuthServiceDependency.MustGet(c.di)
 
 	h := rest.RootHandler(
 		c.log,
 		handler.NewAPIHandler(
 			handler.NewPingHandler(instance),
+			handler.NewAuthHandler(
+				c.log,
+				authService,
+				[]netip.Prefix{},
+			),
 		),
+		authService,
 		apiConfig(cfg),
 	)
 
@@ -189,7 +201,42 @@ func NewRepository(di *Container) *RepositoryComponent {
 func (c *RepositoryComponent) Start(_ context.Context, cfg *koanf.Koanf) error {
 	db := DBDependency.MustGet(c.di)
 
-	UserRepositoryDependency.Set(c.di, sqliterepo.NewUserRepository(db))
+	UserRepositoryDependency.Set(
+		c.di,
+		sqliterepo.NewUserRepository(db),
+	)
+	SessionRepositoryDependency.Set(
+		c.di,
+		sqliterepo.NewSessionsRepository(db),
+	)
+
+	return nil
+}
+
+type AuthServiceComponent struct {
+	di *Container
+}
+
+func NewAuthService(di *Container) *AuthServiceComponent {
+	return &AuthServiceComponent{di: di}
+}
+
+func (c *AuthServiceComponent) Start(
+	_ context.Context,
+	cfg *koanf.Koanf,
+) error {
+	authCfg, err := authConfig(cfg)
+	if err != nil {
+		return err
+	}
+
+	log := LogDependency.MustGet(c.di)
+	userRepo := UserRepositoryDependency.MustGet(c.di)
+	sessionRepo := SessionRepositoryDependency.MustGet(c.di)
+
+	authService := auth.New(log, userRepo, sessionRepo, authCfg)
+
+	AuthServiceDependency.Set(c.di, authService)
 
 	return nil
 }

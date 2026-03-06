@@ -8,7 +8,9 @@ import (
 
 	"saviour/internal/infra/logger"
 	"saviour/internal/infra/sqlite"
+	"saviour/internal/service/auth"
 	"saviour/internal/transport/rest"
+	"saviour/pkg/secret"
 )
 
 var ErrConfigParsing = fmt.Errorf("error parsing config")
@@ -130,6 +132,27 @@ func sqliteConfig(k *koanf.Koanf) (sqlite.Config, error) {
 	cfg.DSN = k.String(dbDSNKey)
 	if cfg.DSN == "" {
 		return cfg, valueRequiredError(dbDSNKey)
+	}
+
+	return cfg, nil
+}
+
+func authConfig(k *koanf.Koanf) (auth.Config, error) {
+	const (
+		accessTokenSecretKey  = "server.api.auth.access_token_secret"  //nolint:gosec
+		refreshTokenSecretKey = "server.api.auth.refresh_token_secret" //nolint:gosec
+	)
+
+	var cfg auth.Config
+
+	cfg.AccessTokenSecret = secret.New(k.String(accessTokenSecretKey))
+	if cfg.AccessTokenSecret.UnsafeString() == "" {
+		return cfg, valueRequiredError(accessTokenSecretKey)
+	}
+
+	cfg.RefreshTokenSecret = secret.New(k.String(refreshTokenSecretKey))
+	if cfg.RefreshTokenSecret.UnsafeString() == "" {
+		return cfg, valueRequiredError(refreshTokenSecretKey)
 	}
 
 	return cfg, nil

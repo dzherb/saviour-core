@@ -11,7 +11,7 @@ import (
 	"saviour/internal/service/auth"
 )
 
-func TestAccessToken_IssueAndValidate_OK(t *testing.T) {
+func TestAccessToken_IssueAndValidate(t *testing.T) {
 	t.Parallel()
 
 	secret := "access-secret"
@@ -19,7 +19,13 @@ func TestAccessToken_IssueAndValidate_OK(t *testing.T) {
 	sessionID := uuid.New()
 	ttl := time.Minute
 
-	token, err := auth.IssueToken(secret, userID, sessionID, ttl)
+	token, err := auth.IssueToken(
+		secret,
+		userID,
+		sessionID,
+		nil,
+		ttl,
+	)
 	require.NoError(t, err)
 	require.NotEmpty(t, token)
 
@@ -31,6 +37,30 @@ func TestAccessToken_IssueAndValidate_OK(t *testing.T) {
 	require.Equal(t, sessionID, parsed.SessionUUID)
 }
 
+func TestAccessToken_ContainsRoles(t *testing.T) {
+	t.Parallel()
+
+	secret := "access-secret"
+	userID := uuid.New()
+	sessionID := uuid.New()
+	ttl := time.Minute
+
+	token, err := auth.IssueToken(
+		secret,
+		userID,
+		sessionID,
+		[]auth.Role{auth.AdminRole, "someone"},
+		ttl,
+	)
+	require.NoError(t, err)
+
+	parsed, err := auth.ValidateToken(token, secret)
+	require.NoError(t, err)
+
+	require.Contains(t, parsed.Roles, auth.AdminRole)
+	require.Contains(t, parsed.Roles, auth.Role("someone"))
+}
+
 func TestToken_InvalidSecret(t *testing.T) {
 	t.Parallel()
 
@@ -38,6 +68,7 @@ func TestToken_InvalidSecret(t *testing.T) {
 		"correct-secret",
 		uuid.New(),
 		uuid.New(),
+		nil,
 		time.Minute,
 	)
 	require.NoError(t, err)
@@ -58,6 +89,7 @@ func TestAccessToken_Expired(t *testing.T) {
 		secret,
 		uuid.New(),
 		uuid.New(),
+		nil,
 		-time.Second,
 	)
 	require.NoError(t, err)
@@ -79,7 +111,7 @@ func TestToken_InvalidSID(t *testing.T) {
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(time.Minute)),
 		},
-		SID: "not-a-uuid",
+		SessionID: "not-a-uuid",
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -103,7 +135,7 @@ func TestToken_InvalidSubject(t *testing.T) {
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(time.Minute)),
 		},
-		SID: uuid.New().String(),
+		SessionID: uuid.New().String(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

@@ -18,7 +18,35 @@ import (
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/google/uuid"
+	"github.com/oapi-codegen/runtime"
 )
+
+const (
+	BearerAuthScopes         = "BearerAuth.Scopes"
+	RefreshTokenCookieScopes = "RefreshTokenCookie.Scopes"
+)
+
+// AccessTokenResponse defines model for AccessTokenResponse.
+type AccessTokenResponse struct {
+	// AccessToken Short-lived token for accessing protected endpoints
+	AccessToken string `json:"access_token"`
+}
+
+// AuthenticationErrorResponse defines model for AuthenticationErrorResponse.
+type AuthenticationErrorResponse = ErrorResponse
+
+// CreateSessionErrorResponse defines model for CreateSessionErrorResponse.
+type CreateSessionErrorResponse = ErrorResponse
+
+// CreateSessionRequest defines model for CreateSessionRequest.
+type CreateSessionRequest struct {
+	Password string `json:"password"`
+	Username string `json:"username"`
+}
+
+// EmptyResponse defines model for EmptyResponse.
+type EmptyResponse = empty
 
 // EntityNotFoundErrorResponse defines model for EntityNotFoundErrorResponse.
 type EntityNotFoundErrorResponse = ErrorResponse
@@ -37,6 +65,9 @@ type ErrorResponse struct {
 	} `json:"error"`
 }
 
+// MediaUploadFinalizeErrorResponse defines model for MediaUploadFinalizeErrorResponse.
+type MediaUploadFinalizeErrorResponse = ErrorResponse
+
 // PingResponse defines model for PingResponse.
 type PingResponse struct {
 	// Instance Name of the server instance
@@ -46,11 +77,67 @@ type PingResponse struct {
 	ServerTime time.Time `json:"server_time"`
 }
 
+// RefreshSessionErrorResponse defines model for RefreshSessionErrorResponse.
+type RefreshSessionErrorResponse = ErrorResponse
+
+// RoleRequiredErrorResponse defines model for RoleRequiredErrorResponse.
+type RoleRequiredErrorResponse = ErrorResponse
+
 // TimeoutErrorResponse defines model for TimeoutErrorResponse.
 type TimeoutErrorResponse = ErrorResponse
 
+// UUID defines model for UUID.
+type UUID = uuid.UUID
+
 // ValidationErrorResponse defines model for ValidationErrorResponse.
 type ValidationErrorResponse = ErrorResponse
+
+// CreateSessionJSONRequestBody defines body for CreateSession for application/json ContentType.
+type CreateSessionJSONRequestBody = CreateSessionRequest
+
+type CreateSessionRequestObject struct {
+	Body *CreateSessionJSONRequestBody
+}
+
+type CreateSessionResponseObject interface {
+	VisitCreateSessionResponse(w http.ResponseWriter) error
+}
+
+func (r AccessTokenResponse) VisitCreateSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(r)
+}
+
+type RefreshSessionRequestObject struct {
+}
+
+type RefreshSessionResponseObject interface {
+	VisitRefreshSessionResponse(w http.ResponseWriter) error
+}
+
+func (r AccessTokenResponse) VisitRefreshSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(r)
+}
+
+type RevokeSessionRequestObject struct {
+	SessionID UUID `json:"session_id"`
+}
+
+type RevokeSessionResponseObject interface {
+	VisitRevokeSessionResponse(w http.ResponseWriter) error
+}
+
+func (r EmptyResponse) VisitRevokeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(r)
+}
 
 type PingRequestObject struct {
 }
@@ -68,6 +155,15 @@ func (r PingResponse) VisitPingResponse(w http.ResponseWriter) error {
 
 // HandlerInterface represents all server handlers.
 type HandlerInterface interface {
+	// Create a new session
+	// (POST /auth/sessions)
+	CreateSession(w http.ResponseWriter, r *http.Request, request CreateSessionRequestObject) (CreateSessionResponseObject, error)
+	// Refresh the current session
+	// (POST /auth/sessions/refresh)
+	RefreshSession(w http.ResponseWriter, r *http.Request, request RefreshSessionRequestObject) (RefreshSessionResponseObject, error)
+	// Revoke a session
+	// (POST /auth/sessions/{session_id}/revoke)
+	RevokeSession(w http.ResponseWriter, r *http.Request, request RevokeSessionRequestObject) (RevokeSessionResponseObject, error)
 	// Ping the API server
 	// (GET /ping)
 	Ping(w http.ResponseWriter, r *http.Request, request PingRequestObject) (PingResponseObject, error)
@@ -77,6 +173,83 @@ type HandlerInterface interface {
 type HandlerInterfaceWrapper struct {
 	handler HandlerInterface
 	options Options
+}
+
+// CreateSession operation middleware
+func (hiw *HandlerInterfaceWrapper) CreateSession(w http.ResponseWriter, r *http.Request) {
+
+	var request CreateSessionRequestObject
+
+	var body CreateSessionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		hiw.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	response, err := hiw.handler.CreateSession(w, r, request)
+
+	if err != nil {
+		hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		return
+	}
+
+	if response != nil {
+		if err := response.VisitCreateSessionResponse(w); err != nil {
+			hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	}
+}
+
+// RefreshSession operation middleware
+func (hiw *HandlerInterfaceWrapper) RefreshSession(w http.ResponseWriter, r *http.Request) {
+
+	var request RefreshSessionRequestObject
+
+	response, err := hiw.handler.RefreshSession(w, r, request)
+
+	if err != nil {
+		hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		return
+	}
+
+	if response != nil {
+		if err := response.VisitRefreshSessionResponse(w); err != nil {
+			hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	}
+}
+
+// RevokeSession operation middleware
+func (hiw *HandlerInterfaceWrapper) RevokeSession(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "session_id" -------------
+	var sessionID UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "session_id", r.PathValue("session_id"), &sessionID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		hiw.options.RequestErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "session_id", Err: err})
+		return
+	}
+
+	var request RevokeSessionRequestObject
+
+	request.SessionID = sessionID
+
+	response, err := hiw.handler.RevokeSession(w, r, request)
+
+	if err != nil {
+		hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		return
+	}
+
+	if response != nil {
+		if err := response.VisitRevokeSessionResponse(w); err != nil {
+			hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	}
 }
 
 // Ping operation middleware
@@ -186,7 +359,10 @@ type Options struct {
 }
 
 const (
-	PingPath = "/ping"
+	CreateSessionPath  = "/auth/sessions"
+	RefreshSessionPath = "/auth/sessions/refresh"
+	RevokeSessionPath  = "/auth/sessions/{session_id}/revoke"
+	PingPath           = "/ping"
 )
 
 // HandlerWithOptions creates http.Handler with additional options
@@ -202,6 +378,9 @@ func HandlerWithOptions(hi HandlerInterface, options Options) http.Handler {
 		options: options,
 	}
 
+	m.HandleFunc("POST "+options.BaseURL+CreateSessionPath, wrapper.CreateSession)
+	m.HandleFunc("POST "+options.BaseURL+RefreshSessionPath, wrapper.RefreshSession)
+	m.HandleFunc("POST "+options.BaseURL+RevokeSessionPath, wrapper.RevokeSession)
 	m.HandleFunc("GET "+options.BaseURL+PingPath, wrapper.Ping)
 
 	return m
@@ -210,21 +389,33 @@ func HandlerWithOptions(hi HandlerInterface, options Options) http.Handler {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
+	"FuVojSEAAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

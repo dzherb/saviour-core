@@ -18,6 +18,20 @@ x-error-responses:
         application/json:
           schema:
             $ref: "#/components/schemas/ValidationErrorResponse"
+  authentication-error-response: &authentication-error-response
+    "401":
+      description: authentication error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AuthenticationErrorResponse"
+  role-required-error-response: &role-required-error-response
+    "403":
+      description: authentication error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RoleRequiredErrorResponse"
   not-found-error-response: &not-found-error-response
     "404":
       description: entity not found error
@@ -43,6 +57,8 @@ x-error-responses:
 tags:
   - name: health
     description: API server's health operations
+  - name: authentication
+    description: Session operations
 
 paths:
   "/ping":
@@ -64,6 +80,92 @@ paths:
           *timeout-error-response,
           *server-error-response,
         ]
+  "/auth/sessions":
+    post:
+      summary: Create a new session
+      description: Create a new session
+      security: [ ]
+      tags:
+        - authentication
+      operationId: create_session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSessionRequest"
+      responses:
+        "200":
+          description: create session response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessTokenResponse"
+        "401":
+          description: invalid credentials error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateSessionErrorResponse"
+        <<: [
+          *validation-error-response,
+          *timeout-error-response,
+          *server-error-response,
+        ]
+  "/auth/sessions/refresh":
+    post:
+      summary: Refresh the current session
+      description: Refresh the current session. Refresh token is extracted from cookies
+      security:
+        - RefreshTokenCookie: [ ]
+      tags:
+        - authentication
+      operationId: refresh_session
+      responses:
+        "200":
+          description: refresh session response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessTokenResponse"
+        "401":
+          description: refresh session error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshSessionErrorResponse"
+        <<: [
+          *not-found-error-response,
+          *timeout-error-response,
+          *server-error-response,
+        ]
+  "/auth/sessions/{session_id}/revoke":
+    post:
+      summary: Revoke a session
+      description: Revoke a session
+      tags:
+        - authentication
+      operationId: revoke_session
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        "200":
+          description: revoke session response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyResponse"
+        <<: [
+          *authentication-error-response,
+          *not-found-error-response,
+          *validation-error-response,
+          *timeout-error-response,
+          *server-error-response,
+        ]
 
 components:
   securitySchemes:
@@ -72,7 +174,16 @@ components:
       scheme: bearer
       bearerFormat: JWT
 
+    RefreshTokenCookie:
+      type: apiKey
+      in: cookie
+      name: refresh_token
+
   schemas:
+    EmptyResponse:
+      type: object
+      additionalProperties: false
+
     PingResponse:
       type: object
       properties:
@@ -86,6 +197,29 @@ components:
       required:
         - instance
         - server_time
+
+    CreateSessionRequest:
+      type: object
+      required: [ username, password ]
+      properties:
+        username:
+          type: string
+          minLength: 5
+        password:
+          type: string
+          example: "Su6erSecR3T"
+
+    AccessTokenResponse:
+      type: object
+      required: [ access_token ]
+      properties:
+        access_token:
+          type: string
+          description: Short-lived token for accessing protected endpoints
+
+    UUID:
+      type: string
+      format: uuid
 
     ErrorResponse:
       required: [ error ]
@@ -107,17 +241,6 @@ components:
               description: Error message
               example: Error message
 
-    EntityNotFoundErrorResponse:
-      allOf:
-        - $ref: "#/components/schemas/ErrorResponse"
-        - type: object
-          properties:
-            error:
-              properties:
-                type:
-                  enum: [ ENTITY_NOT_FOUND ]
-                  example: ENTITY_NOT_FOUND
-
     ValidationErrorResponse:
       allOf:
         - $ref: "#/components/schemas/ErrorResponse"
@@ -128,6 +251,67 @@ components:
                 type:
                   enum: [ VALIDATION_FAILED ]
                   example: VALIDATION_FAILED
+
+    AuthenticationErrorResponse:
+      allOf:
+        - $ref: "#/components/schemas/ErrorResponse"
+        - type: object
+          properties:
+            error:
+              properties:
+                type:
+                  enum:
+                    - ACCESS_TOKEN_NOT_VALID
+                    - ACCESS_TOKEN_EXPIRED
+                  example: ACCESS_TOKEN_NOT_VALID
+
+    RoleRequiredErrorResponse:
+      allOf:
+        - $ref: "#/components/schemas/ErrorResponse"
+        - type: object
+          properties:
+            error:
+              properties:
+                type:
+                  enum:
+                    - ROLE_REQUIRED
+                  example: ROLE_REQUIRED
+
+    CreateSessionErrorResponse:
+      allOf:
+        - $ref: "#/components/schemas/ErrorResponse"
+        - type: object
+          properties:
+            error:
+              properties:
+                type:
+                  enum: [ INVALID_CREDENTIALS ]
+                  example: INVALID_CREDENTIALS
+
+    RefreshSessionErrorResponse:
+      allOf:
+        - $ref: "#/components/schemas/ErrorResponse"
+        - type: object
+          properties:
+            error:
+              properties:
+                type:
+                  enum:
+                    - REFRESH_TOKEN_NOT_SET
+                    - REFRESH_TOKEN_NOT_VALID
+                    - REFRESH_TOKEN_EXPIRED
+                  example: REFRESH_TOKEN_NOT_VALID
+
+    EntityNotFoundErrorResponse:
+      allOf:
+        - $ref: "#/components/schemas/ErrorResponse"
+        - type: object
+          properties:
+            error:
+              properties:
+                type:
+                  enum: [ ENTITY_NOT_FOUND ]
+                  example: ENTITY_NOT_FOUND
 
     TimeoutErrorResponse:
       allOf:

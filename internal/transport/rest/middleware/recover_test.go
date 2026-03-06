@@ -20,7 +20,7 @@ func TestRecover_BeforeWrite(t *testing.T) {
 		panic("test panic")
 	})
 
-	h := testmock.NewSlogHandlerMock()
+	h := testmock.NewMockSlogHandler()
 	log := slog.New(h)
 
 	wrappedHandler := middleware.Recover(log)(handler)

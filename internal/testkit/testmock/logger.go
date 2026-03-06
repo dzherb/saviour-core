@@ -11,23 +11,23 @@ type handlerState struct {
 	records []slog.Record
 }
 
-type SlogHandlerMock struct {
+type MockSlogHandler struct {
 	state  *handlerState
 	attrs  []slog.Attr
 	groups []string
 }
 
-func NewSlogHandlerMock() *SlogHandlerMock {
-	return &SlogHandlerMock{
+func NewMockSlogHandler() *MockSlogHandler {
+	return &MockSlogHandler{
 		state: &handlerState{},
 	}
 }
 
-func (h *SlogHandlerMock) Enabled(context.Context, slog.Level) bool {
+func (h *MockSlogHandler) Enabled(context.Context, slog.Level) bool {
 	return true
 }
 
-func (h *SlogHandlerMock) Handle(_ context.Context, r slog.Record) error {
+func (h *MockSlogHandler) Handle(_ context.Context, r slog.Record) error {
 	rc := slog.Record{
 		Time:    r.Time,
 		Level:   r.Level,
@@ -67,21 +67,21 @@ func (h *SlogHandlerMock) Handle(_ context.Context, r slog.Record) error {
 	return nil
 }
 
-func (h *SlogHandlerMock) WithAttrs(attrs []slog.Attr) slog.Handler {
+func (h *MockSlogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	h2 := h.clone()
 	h2.attrs = append(h2.attrs, attrs...)
 
 	return h2
 }
 
-func (h *SlogHandlerMock) WithGroup(name string) slog.Handler {
+func (h *MockSlogHandler) WithGroup(name string) slog.Handler {
 	h2 := h.clone()
 	h2.groups = append(h2.groups, name)
 
 	return h2
 }
 
-func (h *SlogHandlerMock) Records() []slog.Record {
+func (h *MockSlogHandler) Records() []slog.Record {
 	h.state.mu.Lock()
 	defer h.state.mu.Unlock()
 
@@ -91,8 +91,8 @@ func (h *SlogHandlerMock) Records() []slog.Record {
 	return out
 }
 
-func (h *SlogHandlerMock) clone() *SlogHandlerMock {
-	return &SlogHandlerMock{
+func (h *MockSlogHandler) clone() *MockSlogHandler {
+	return &MockSlogHandler{
 		state:  h.state,
 		attrs:  append([]slog.Attr(nil), h.attrs...),
 		groups: append([]string(nil), h.groups...),

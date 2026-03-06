@@ -18,6 +18,13 @@ const (
 	EntityNotFoundErrorType       ErrorType = "ENTITY_NOT_FOUND"
 	MethodNotAllowedErrorType     ErrorType = "METHOD_NOT_ALLOWED"
 	ValidationFailedErrorType     ErrorType = "VALIDATION_FAILED"
+	InvalidCredentialsErrorType   ErrorType = "INVALID_CREDENTIALS" //nolint:gosec,lll
+	AccessTokenNotValidErrorType  ErrorType = "ACCESS_TOKEN_NOT_VALID"
+	AccessTokenExpiredErrorType   ErrorType = "ACCESS_TOKEN_EXPIRED"
+	RefreshTokenNotSetErrorType   ErrorType = "REFRESH_TOKEN_NOT_SET"
+	RefreshTokenNotValidErrorType ErrorType = "REFRESH_TOKEN_NOT_VALID"
+	RefreshTokenExpiredErrorType  ErrorType = "REFRESH_TOKEN_EXPIRED" //nolint:gosec,lll
+	RoleRequiredErrorType         ErrorType = "ROLE_REQUIRED"
 )
 
 type errorResponse interface {

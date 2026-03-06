@@ -9,6 +9,7 @@ import (
 
 	"saviour/internal/model"
 	"saviour/internal/repository"
+	"saviour/internal/repository/sqlite/sqlc"
 	sqlitequery "saviour/internal/repository/sqlite/sqlc/gen"
 )
 
@@ -33,7 +34,11 @@ func (r *UserRepository) CreateUser(
 	user, err := r.txAwareQueries(ctx).
 		CreateUser(
 			ctx,
-			sqlitequery.CreateUserParams(params),
+			sqlitequery.CreateUserParams{
+				UUID:         sqlc.UUID(params.UUID),
+				Username:     params.Username,
+				PasswordHash: params.PasswordHash,
+			},
 		)
 	if err != nil {
 		return nil, err
@@ -64,7 +69,7 @@ func (r *UserRepository) GetUserByUsername(
 
 func mapUser(user *sqlitequery.User) *model.User {
 	return &model.User{
-		UUID:         user.UUID,
+		UUID:         uuid.UUID(user.UUID),
 		CreatedAt:    user.CreatedAt.Time(),
 		Username:     user.Username,
 		PasswordHash: user.PasswordHash,

@@ -5,15 +5,14 @@
 package sqlitequery
 
 import (
-	"github.com/google/uuid"
 	"saviour/internal/repository/sqlite/sqlc"
 )
 
 type Session struct {
-	UUID             uuid.UUID
+	UUID             sqlc.UUID
 	CreatedAt        sqlc.UnixTime
 	UpdatedAt        sqlc.UnixTime
-	UserUUID         uuid.UUID
+	UserUUID         sqlc.UUID
 	RefreshTokenHash string
 	RevokedAt        interface{}
 	LastRefreshAt    sqlc.UnixTime
@@ -22,7 +21,7 @@ type Session struct {
 }
 
 type User struct {
-	UUID         uuid.UUID
+	UUID         sqlc.UUID
 	CreatedAt    sqlc.UnixTime
 	UpdatedAt    sqlc.UnixTime
 	Username     string

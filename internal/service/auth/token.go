@@ -14,17 +14,26 @@ const Issuer = "saviour.core"
 type TokenParsed struct {
 	UserUUID    uuid.UUID
 	SessionUUID uuid.UUID
+	Roles       []Role
 }
+
+type Role string
+
+const (
+	AdminRole Role = "admin"
+)
 
 type SessionClaims struct {
 	jwt.RegisteredClaims
-	SID string `json:"sid"`
+	SessionID string `json:"sid"`
+	Roles     []Role `json:"role,omitempty"`
 }
 
 func issueToken(
 	secret string,
 	userUUID uuid.UUID,
 	sessionUUID uuid.UUID,
+	roles []Role,
 	ttl time.Duration,
 ) (string, error) {
 	now := time.Now()
@@ -38,7 +47,8 @@ func issueToken(
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
 		},
-		SID: sessionUUID.String(),
+		SessionID: sessionUUID.String(),
+		Roles:     roles,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -80,7 +90,7 @@ func validateToken(
 		return nil, fmt.Errorf("%w: parse sub: %w", ErrInvalidToken, err)
 	}
 
-	sessionUUID, err := uuid.Parse(claims.SID)
+	sessionUUID, err := uuid.Parse(claims.SessionID)
 	if err != nil {
 		return nil, fmt.Errorf("%w: parse sid: %w", ErrInvalidToken, err)
 	}
@@ -88,5 +98,6 @@ func validateToken(
 	return &TokenParsed{
 		UserUUID:    userUUID,
 		SessionUUID: sessionUUID,
+		Roles:       claims.Roles,
 	}, nil
 }

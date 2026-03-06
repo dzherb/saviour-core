@@ -12,7 +12,7 @@ import (
 func TestMockHandler_CapturesRecord(t *testing.T) {
 	t.Parallel()
 
-	h := testmock.NewSlogHandlerMock()
+	h := testmock.NewMockSlogHandler()
 	log := slog.New(h)
 
 	log.Info("hello", slog.String("k", "v"))
@@ -39,7 +39,7 @@ func TestMockHandler_CapturesRecord(t *testing.T) {
 func TestMockHandler_WithAttrs(t *testing.T) {
 	t.Parallel()
 
-	h := testmock.NewSlogHandlerMock()
+	h := testmock.NewMockSlogHandler()
 	log := slog.New(h)
 
 	base := log
@@ -73,7 +73,7 @@ func TestMockHandler_WithAttrs(t *testing.T) {
 func TestMockHandler_WithGroup(t *testing.T) {
 	t.Parallel()
 
-	h := testmock.NewSlogHandlerMock()
+	h := testmock.NewMockSlogHandler()
 	log := slog.New(h)
 
 	log.
@@ -103,7 +103,7 @@ func TestMockHandler_WithGroup(t *testing.T) {
 func TestMockHandler_WithAndInlineAttrs(t *testing.T) {
 	t.Parallel()
 
-	h := testmock.NewSlogHandlerMock()
+	h := testmock.NewMockSlogHandler()
 	log := slog.New(h)
 
 	log.
@@ -129,7 +129,7 @@ func TestMockHandler_WithAndInlineAttrs(t *testing.T) {
 func TestMockHandler_Concurrent(t *testing.T) {
 	t.Parallel()
 
-	h := testmock.NewSlogHandlerMock()
+	h := testmock.NewMockSlogHandler()
 	log := slog.New(h)
 
 	done := make(chan struct{})

@@ -5,7 +5,21 @@ import (
 	"fmt"
 	"net/netip"
 	"time"
+
+	"github.com/google/uuid"
 )
+
+// UUID wraps uuid.UUID to store UUID values in the database as a
+// 16-byte BLOB instead of a textual representation.
+type UUID uuid.UUID
+
+func (u *UUID) Scan(src any) error {
+	return (*uuid.UUID)(u).Scan(src)
+}
+
+func (u UUID) Value() (driver.Value, error) {
+	return u[:], nil
+}
 
 type UnixTime time.Time
 

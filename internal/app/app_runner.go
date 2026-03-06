@@ -34,6 +34,7 @@ func Run(cfgPaths []string) error {
 	instanceComponent := NewInstance(di)
 	dbComponent := NewDB(di)
 	repositoryComponent := NewRepository(di)
+	authServiceComponent := NewAuthService(di)
 	serverComponent := NewServer(di)
 
 	app := New(LogDependency.MustGet(di))
@@ -42,6 +43,7 @@ func Run(cfgPaths []string) error {
 		instanceComponent,
 		dbComponent,
 		repositoryComponent,
+		authServiceComponent,
 		serverComponent,
 	)
 

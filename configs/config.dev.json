@@ -13,7 +13,11 @@
     "read_header_timeout": "10s",
     "api": {
       "response_timeout": "10s",
-      "debug_log_processed_requests": true
+      "debug_log_processed_requests": true,
+      "auth": {
+        "access_token_secret": "unsecure_access_secret",
+        "refresh_token_secret": "unsecure_refresh_secret"
+      }
     }
   },
   "db": {

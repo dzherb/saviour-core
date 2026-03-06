@@ -12,6 +12,7 @@ import (
 	"github.com/justinas/alice"
 
 	"saviour/internal/logger"
+	"saviour/internal/service/auth"
 	"saviour/internal/transport/rest/api"
 	"saviour/internal/transport/rest/middleware"
 )
@@ -32,6 +33,7 @@ const apiPrefix = "/api"
 func RootHandler(
 	log *slog.Logger,
 	apiImpl api.HandlerInterface,
+	tokenValidator auth.TokenValidator,
 	cfg APIConfig,
 ) http.Handler {
 	spec, err := api.GetSwagger()
@@ -53,6 +55,7 @@ func RootHandler(
 		),
 		middleware.Timeout(log, cfg.ResponseTimeout),
 		middleware.OAPIValidator(log, spec),
+		middleware.Authenticator(log, tokenValidator),
 	}
 
 	apiHandler = alice.New(apiMiddlewares...).Then(apiHandler)

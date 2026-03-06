@@ -8,7 +8,7 @@ package sqlitequery
 import (
 	"context"
 
-	"github.com/google/uuid"
+	"saviour/internal/repository/sqlite/sqlc"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -18,7 +18,7 @@ RETURNING uuid, created_at, updated_at, username, password_hash, is_admin
 `
 
 type CreateUserParams struct {
-	UUID         uuid.UUID
+	UUID         sqlc.UUID
 	Username     string
 	PasswordHash string
 }
@@ -41,8 +41,8 @@ const getUserByUUID = `-- name: GetUserByUUID :one
 SELECT uuid, created_at, updated_at, username, password_hash, is_admin FROM users WHERE uuid = ?
 `
 
-func (q *Queries) GetUserByUUID(ctx context.Context, argUuid uuid.UUID) (User, error) {
-	row := q.db.QueryRowContext(ctx, getUserByUUID, argUuid)
+func (q *Queries) GetUserByUUID(ctx context.Context, uuid sqlc.UUID) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByUUID, uuid)
 	var i User
 	err := row.Scan(
 		&i.UUID,

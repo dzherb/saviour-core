@@ -32,27 +32,24 @@ type Config struct {
 }
 
 type Auth struct {
-	log          *slog.Logger
-	db           repository.DBTX
-	usersRepo    repository.UserRepository
-	sessionsRepo repository.SessionRepository
+	log         *slog.Logger
+	userRepo    repository.UserRepository
+	sessionRepo repository.SessionRepository
 
 	cfg Config
 }
 
 func New(
 	log *slog.Logger,
-	db repository.DBTX,
-	usersRepo repository.UserRepository,
+	userRepo repository.UserRepository,
 	sessionsRepo repository.SessionRepository,
 	cfg Config,
 ) *Auth {
 	return &Auth{
-		log:          log,
-		db:           db,
-		usersRepo:    usersRepo,
-		sessionsRepo: sessionsRepo,
-		cfg:          cfg,
+		log:         log,
+		userRepo:    userRepo,
+		sessionRepo: sessionsRepo,
+		cfg:         cfg,
 	}
 }
 
@@ -69,7 +66,7 @@ func (a *Auth) CreateSession(
 	ctx context.Context,
 	params CreateSessionParams,
 ) (*model.TokenPair, error) {
-	user, err := a.usersRepo.GetUserByUsername(
+	user, err := a.userRepo.GetUserByUsername(
 		ctx,
 		params.Username,
 	)
@@ -90,12 +87,16 @@ func (a *Auth) CreateSession(
 
 	sessionUUID := uuid.Must(uuid.NewV7())
 
-	tokenPair, err := a.issueTokenPair(user.UUID, sessionUUID)
+	tokenPair, err := a.issueTokenPair(
+		user.UUID,
+		sessionUUID,
+		a.userRoles(user),
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = a.sessionsRepo.CreateSession(
+	_, err = a.sessionRepo.CreateSession(
 		ctx,
 		repository.CreateSessionParams{
 			UUID:             sessionUUID,
@@ -127,18 +128,23 @@ func (a *Auth) RefreshSession(
 		return nil, err
 	}
 
-	tokenPair, err := a.issueTokenPair(token.UserUUID, token.SessionUUID)
+	tokenPair, err := a.issueTokenPair(
+		token.UserUUID,
+		token.SessionUUID,
+		token.Roles,
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	err = a.sessionsRepo.RefreshActiveSession(
+	err = a.sessionRepo.RefreshActiveSession(
 		ctx,
 		repository.RefreshActiveSessionParams{
-			UUID:             token.SessionUUID,
-			RefreshTokenHash: hashRefreshToken(tokenPair.RefreshToken),
-			IP:               params.IP,
-			RefreshTTL:       RefreshTokenTTL,
+			UUID:                token.SessionUUID,
+			RefreshTokenHash:    hashRefreshToken(params.RefreshToken),
+			NewRefreshTokenHash: hashRefreshToken(tokenPair.RefreshToken),
+			IP:                  params.IP,
+			RefreshTTL:          RefreshTokenTTL,
 		},
 	)
 	if err != nil {
@@ -170,7 +176,7 @@ func (a *Auth) RevokeSession(
 	ctx context.Context,
 	params RevokeSessionParams,
 ) error {
-	err := a.sessionsRepo.RevokeSession(
+	err := a.sessionRepo.RevokeSession(
 		ctx,
 		repository.RevokeSessionParams{
 			UUID:     params.SessionUUID,
@@ -196,11 +202,13 @@ func (a *Auth) ValidateRefreshToken(token string) (*TokenParsed, error) {
 
 func (a *Auth) issueTokenPair(
 	userUUID, sessionUUID uuid.UUID,
+	roles []Role,
 ) (*model.TokenPair, error) {
 	accessToken, err := issueToken(
 		a.cfg.AccessTokenSecret.UnsafeString(),
 		userUUID,
 		sessionUUID,
+		roles,
 		AccessTokenTTL,
 	)
 	if err != nil {
@@ -211,6 +219,7 @@ func (a *Auth) issueTokenPair(
 		a.cfg.RefreshTokenSecret.UnsafeString(),
 		userUUID,
 		sessionUUID,
+		roles,
 		RefreshTokenTTL,
 	)
 	if err != nil {
@@ -221,6 +230,14 @@ func (a *Auth) issueTokenPair(
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}, nil
+}
+
+func (a *Auth) userRoles(user *model.User) []Role {
+	if user.IsAdmin {
+		return []Role{AdminRole}
+	}
+
+	return nil
 }
 
 func hashRefreshToken(token string) string {

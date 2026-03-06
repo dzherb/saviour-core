@@ -8,7 +8,12 @@ import (
 )
 
 func (suite *APITestSuite) TestPing_OK() {
-	w, r := suite.PreparedRecorderAndRequest(http.MethodGet, "/ping", nil)
+	w, r := suite.PreparedRecorderAndRequest(
+		http.MethodGet,
+		"/ping",
+		nil,
+		nil,
+	)
 
 	h := handler.APIHandler{
 		PingHandler: handler.NewPingHandler("test"),

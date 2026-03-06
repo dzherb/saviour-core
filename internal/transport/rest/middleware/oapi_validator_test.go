@@ -67,6 +67,13 @@ func TestOAPIValidator_ValidationFails(t *testing.T) {
 			expectedStatus:    http.StatusMethodNotAllowed,
 			expectedToContain: string(api.MethodNotAllowedErrorType),
 		},
+		{
+			path:              "/auth/sessions",
+			method:            http.MethodPost,
+			body:              []byte(`{"wrong_field": true}`),
+			expectedStatus:    http.StatusBadRequest,
+			expectedToContain: string(api.ValidationFailedErrorType),
+		},
 	}
 
 	for _, c := range cases {

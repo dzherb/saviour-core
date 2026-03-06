@@ -14,7 +14,7 @@ sql:
         overrides:
           - db_type: "UUID_BLOB"
             go_type:
-              import: "github.com/google/uuid"
+              import: "saviour/internal/repository/sqlite/sqlc"
               type: "UUID"
           - db_type: "UNIXTIME_INT"
             go_type:

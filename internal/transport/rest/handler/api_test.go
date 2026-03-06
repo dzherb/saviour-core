@@ -12,9 +12,11 @@ import (
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/getkin/kin-openapi/routers"
 	"github.com/getkin/kin-openapi/routers/gorillamux"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/suite"
 
 	"saviour/internal/logger"
+	"saviour/internal/service/auth"
 	"saviour/internal/transport/rest/api"
 )
 
@@ -23,6 +25,8 @@ type APITestSuite struct {
 
 	spec   *openapi3.T
 	router routers.Router
+
+	AuthToken *auth.TokenParsed
 }
 
 func (suite *APITestSuite) SetupSuite() {
@@ -47,6 +51,7 @@ func (suite *APITestSuite) SetupSuite() {
 func (suite *APITestSuite) PreparedRecorderAndRequest(
 	method, path string,
 	body map[string]any,
+	userRoles []auth.Role,
 ) (*httptest.ResponseRecorder, *http.Request) {
 	t := suite.T()
 	t.Helper()
@@ -58,6 +63,16 @@ func (suite *APITestSuite) PreparedRecorderAndRequest(
 	r := httptest.NewRequest(method, path, bytes.NewReader(bodyBytes))
 
 	r.Header.Set("Content-Type", "application/json")
+
+	suite.AuthToken = &auth.TokenParsed{
+		UserUUID:    uuid.New(),
+		SessionUUID: uuid.New(),
+		Roles:       userRoles,
+	}
+
+	r = r.WithContext(
+		auth.ContextWithToken(r.Context(), suite.AuthToken),
+	)
 
 	route, pathParams, err := suite.router.FindRoute(r)
 	suite.Require().NoError(err)

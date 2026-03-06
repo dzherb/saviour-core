@@ -36,6 +36,7 @@ func TestConfigParsers_NoErrorsOnValidInput(t *testing.T) {
 		wrapParser(app.LoggerOptions),
 		wrapParser(app.ServerConfig),
 		wrapParserNoErr(app.APIConfig),
+		wrapParser(app.SQLiteConfig),
 	}
 
 	fileSource := config.FileSource("../../configs/config.dev.json")

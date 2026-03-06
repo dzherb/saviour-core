@@ -13,3 +13,10 @@ packages:
           structname: '{{.Mock}}DB'
       UserRepository:
       SessionRepository:
+  saviour/internal/service/auth:
+    interfaces:
+      Service:
+        config:
+          structname: '{{.Mock}}AuthService'
+          filename: "auth_service_mock.go"
+      TokenValidator:

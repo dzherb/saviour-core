@@ -75,10 +75,11 @@ type CreateSessionParams struct {
 }
 
 type RefreshActiveSessionParams struct {
-	UUID             uuid.UUID
-	RefreshTokenHash string
-	IP               netip.Addr
-	RefreshTTL       time.Duration
+	UUID                uuid.UUID
+	RefreshTokenHash    string
+	NewRefreshTokenHash string
+	IP                  netip.Addr
+	RefreshTTL          time.Duration
 }
 
 type RevokeSessionParams struct {

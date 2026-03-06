@@ -56,7 +56,6 @@ func TestAuth_CreateSession_OK(t *testing.T) {
 
 	authService := auth.New(
 		logger.Noop,
-		nil,
 		userRepo,
 		sessionRepo,
 		testConfig(),
@@ -91,12 +90,12 @@ func TestAuth_RefreshSession_OK(t *testing.T) {
 		cfg.RefreshTokenSecret.UnsafeString(),
 		userID,
 		sessionID,
+		nil,
 		auth.RefreshTokenTTL,
 	)
 
 	userRepo := testmock.NewMockUserRepository(t)
 	sessionRepo := testmock.NewMockSessionRepository(t)
-	db := testmock.NewMockDB(t)
 
 	sessionRepo.EXPECT().
 		RefreshActiveSession(
@@ -107,7 +106,6 @@ func TestAuth_RefreshSession_OK(t *testing.T) {
 
 	authService := auth.New(
 		logger.Noop,
-		db,
 		userRepo,
 		sessionRepo,
 		cfg,
@@ -136,10 +134,10 @@ func TestAuth_RefreshSession_SessionNotFound(t *testing.T) {
 		cfg.RefreshTokenSecret.UnsafeString(),
 		uuid.New(),
 		uuid.New(),
+		nil,
 		auth.RefreshTokenTTL,
 	)
 
-	db := testmock.NewMockDB(t)
 	sessionRepo := testmock.NewMockSessionRepository(t)
 
 	sessionRepo.
@@ -152,7 +150,6 @@ func TestAuth_RefreshSession_SessionNotFound(t *testing.T) {
 
 	authService := auth.New(
 		logger.Noop,
-		db,
 		nil,
 		sessionRepo,
 		cfg,
@@ -190,7 +187,6 @@ func TestAuth_RevokeSession_OK(t *testing.T) {
 
 	authService := auth.New(
 		logger.Noop,
-		nil,
 		nil,
 		sessionRepo,
 		testConfig(),
@@ -230,7 +226,6 @@ func TestAuth_RevokeSession_SessionNotFound(t *testing.T) {
 
 	authService := auth.New(
 		logger.Noop,
-		nil,
 		nil,
 		sessionRepo,
 		testConfig(),

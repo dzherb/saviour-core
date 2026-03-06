@@ -33,8 +33,8 @@ func (r *SessionsRepository) CreateSession(
 		CreateSession(
 			ctx,
 			sqlitequery.CreateSessionParams{
-				UUID:             params.UUID,
-				UserUUID:         params.UserUUID,
+				UUID:             sqlc.UUID(params.UUID),
+				UserUUID:         sqlc.UUID(params.UserUUID),
 				RefreshTokenHash: params.RefreshTokenHash,
 				UserAgent:        params.UserAgent,
 				IP:               sqlc.IP(params.IP),
@@ -55,10 +55,11 @@ func (r *SessionsRepository) RefreshActiveSession(
 		RefreshActiveSession(
 			ctx,
 			sqlitequery.RefreshActiveSessionParams{
-				UUID:             params.UUID,
-				RefreshTokenHash: params.RefreshTokenHash,
-				IP:               sqlc.IP(params.IP),
-				RefreshTTLInSec:  int64(params.RefreshTTL.Seconds()),
+				UUID:                sqlc.UUID(params.UUID),
+				RefreshTokenHash:    params.RefreshTokenHash,
+				NewRefreshTokenHash: params.NewRefreshTokenHash,
+				IP:                  sqlc.IP(params.IP),
+				RefreshTTLInSec:     int64(params.RefreshTTL.Seconds()),
 			},
 		)
 	if err != nil {
@@ -79,7 +80,10 @@ func (r *SessionsRepository) RevokeSession(
 	rowsAffected, err := r.txAwareQueries(ctx).
 		RevokeSession(
 			ctx,
-			sqlitequery.RevokeSessionParams(params),
+			sqlitequery.RevokeSessionParams{
+				UUID:     sqlc.UUID(params.UUID),
+				UserUUID: sqlc.UUID(params.UserUUID),
+			},
 		)
 	if err != nil {
 		return err
@@ -94,9 +98,9 @@ func (r *SessionsRepository) RevokeSession(
 
 func mapSession(session *sqlitequery.Session) *model.Session {
 	return &model.Session{
-		UUID:          session.UUID,
+		UUID:          uuid.UUID(session.UUID),
 		CreatedAt:     session.CreatedAt.Time(),
-		UserUUID:      session.UserUUID,
+		UserUUID:      uuid.UUID(session.UserUUID),
 		LastRefreshAt: session.LastRefreshAt.Time(),
 		UserAgent:     session.UserAgent,
 		IP:            session.IPLast.Addr(),

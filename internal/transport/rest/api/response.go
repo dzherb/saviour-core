@@ -31,3 +31,5 @@ func WriteResponse(
 		)
 	}
 }
+
+type empty struct{}

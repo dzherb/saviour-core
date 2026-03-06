@@ -13,7 +13,7 @@ import (
 func TestSlogToStdLog(t *testing.T) {
 	t.Parallel()
 
-	h := testmock.NewSlogHandlerMock()
+	h := testmock.NewMockSlogHandler()
 	log := slog.New(h)
 
 	std := logger.SlogToStdLog(log, slog.LevelWarn)

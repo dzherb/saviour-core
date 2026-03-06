@@ -40,7 +40,7 @@ func TestTraceCtx(t *testing.T) {
 func TestTraceContextHandler_AddsTraceID(t *testing.T) {
 	t.Parallel()
 
-	base := testmock.NewSlogHandlerMock()
+	base := testmock.NewMockSlogHandler()
 	h := logger.NewTraceContextHandler(base)
 
 	log := slog.New(h)
@@ -72,7 +72,7 @@ func TestTraceContextHandler_AddsTraceID(t *testing.T) {
 func TestTraceContextHandler_NoTraceID(t *testing.T) {
 	t.Parallel()
 
-	base := testmock.NewSlogHandlerMock()
+	base := testmock.NewMockSlogHandler()
 	h := logger.NewTraceContextHandler(base)
 
 	log := slog.New(h)
@@ -107,7 +107,7 @@ func TestTraceContextHandler_WithGroupPanics(t *testing.T) {
 func TestTraceContextHandler_WithAttrsPreservesTraceID(t *testing.T) {
 	t.Parallel()
 
-	base := testmock.NewSlogHandlerMock()
+	base := testmock.NewMockSlogHandler()
 	h := logger.NewTraceContextHandler(base)
 
 	log := slog.New(h).
