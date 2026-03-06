@@ -176,7 +176,6 @@ func (a *ServiceImpl) RevokeSession(
 	ctx context.Context,
 	params RevokeSessionParams,
 ) error {
-	// todo кэшировать sessionUUID и потом в Authenticator middleware сверять access token
 	err := a.sessionRepo.RevokeSession(
 		ctx,
 		repository.RevokeSessionParams{

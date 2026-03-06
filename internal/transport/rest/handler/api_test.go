@@ -51,7 +51,7 @@ func (suite *APITestSuite) SetupSuite() {
 func (suite *APITestSuite) PreparedRecorderAndRequest(
 	method, path string,
 	body map[string]any,
-	userRoles []auth.Role,
+	tokenRoles []auth.Role,
 ) (*httptest.ResponseRecorder, *http.Request) {
 	t := suite.T()
 	t.Helper()
@@ -67,7 +67,7 @@ func (suite *APITestSuite) PreparedRecorderAndRequest(
 	suite.AuthToken = &auth.TokenParsed{
 		UserUUID:    uuid.New(),
 		SessionUUID: uuid.New(),
-		Roles:       userRoles,
+		Roles:       tokenRoles,
 	}
 
 	r = r.WithContext(

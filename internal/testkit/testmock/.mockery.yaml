@@ -20,3 +20,9 @@ packages:
           structname: '{{.Mock}}AuthService'
           filename: "auth_service_mock.go"
       TokenValidator:
+  saviour/internal/service/user:
+    interfaces:
+      Service:
+        config:
+          structname: '{{.Mock}}UserService'
+          filename: "user_service_mock.go"

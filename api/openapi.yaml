@@ -265,9 +265,11 @@ components:
       properties:
         username:
           type: string
-          minLength: 1
+          pattern: '^[a-z]+$'
+          maxLength: 32
         password:
           type: string
+          maxLength: 64
           example: "Su6erSecR3T"
 
     AccessTokenResponse:
@@ -287,11 +289,14 @@ components:
         username:
           type: string
           description: Must be unique
+          pattern: '^[a-z]+$'
           minLength: 5
+          maxLength: 32
           example: username
         password:
           type: string
           minLength: 8
+          maxLength: 64
           example: "Su6erSecR3T"
         is_admin:
           type: boolean
