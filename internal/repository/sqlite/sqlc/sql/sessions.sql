@@ -13,9 +13,11 @@ UPDATE sessions
 SET refresh_token_hash = sqlc.arg('newRefreshTokenHash'),
     last_refresh_at = unixepoch(),
     ip_last = sqlc.arg('ip')
-WHERE uuid = sqlc.arg('uuid')
+WHERE sessions.uuid = sqlc.arg('uuid')
   -- make sure a refresh token can only be used once
   AND refresh_token_hash = sqlc.arg('refreshTokenHash')
+  -- and the user is active
+  AND (SELECT is_active FROM users WHERE users.uuid = user_uuid) = 1
   -- and the session is not revoked
   AND revoked_at IS NULL
   -- or expired

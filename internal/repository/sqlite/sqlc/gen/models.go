@@ -26,5 +26,14 @@ type User struct {
 	UpdatedAt    sqlc.UnixTime
 	Username     string
 	PasswordHash string
+	IsActive     bool
 	IsAdmin      bool
+}
+
+type Workspace struct {
+	UUID       sqlc.UUID
+	CreatedAt  sqlc.UnixTime
+	UpdatedAt  sqlc.UnixTime
+	Name       string
+	AuthorUUID sqlc.UUID
 }

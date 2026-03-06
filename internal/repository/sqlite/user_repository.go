@@ -38,6 +38,7 @@ func (r *UserRepository) CreateUser(
 				UUID:         sqlc.UUID(params.UUID),
 				Username:     params.Username,
 				PasswordHash: params.PasswordHash,
+				IsAdmin:      params.IsAdmin,
 			},
 		)
 	if err != nil {
@@ -45,6 +46,23 @@ func (r *UserRepository) CreateUser(
 	}
 
 	return mapUser(&user), nil
+}
+
+func (r *UserRepository) DeactivateUser(
+	ctx context.Context,
+	uuid uuid.UUID,
+) error {
+	rowsAffected, err := r.txAwareQueries(ctx).
+		DeactivateUser(ctx, sqlc.UUID(uuid))
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return repository.ErrUserNotFound
+	}
+
+	return nil
 }
 
 func (r *UserRepository) GetUserByUsername(

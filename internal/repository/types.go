@@ -26,6 +26,10 @@ type UserRepository interface {
 		ctx context.Context,
 		params CreateUserParams,
 	) (*model.User, error)
+	DeactivateUser(
+		ctx context.Context,
+		uuid uuid.UUID,
+	) error
 	GetUserByUsername(
 		ctx context.Context,
 		username string,
@@ -40,6 +44,7 @@ type CreateUserParams struct {
 	UUID         uuid.UUID
 	Username     string
 	PasswordHash string
+	IsAdmin      bool
 }
 
 type GetUserByCredentialsParams struct {

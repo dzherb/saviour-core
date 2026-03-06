@@ -12,19 +12,30 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (uuid, username, password_hash)
-VALUES (?, ?, ?)
-RETURNING uuid, created_at, updated_at, username, password_hash, is_admin
+INSERT INTO users (
+  uuid,
+  username,
+  password_hash,
+  is_admin
+)
+VALUES (?, ?, ?, ?)
+RETURNING uuid, created_at, updated_at, username, password_hash, is_active, is_admin
 `
 
 type CreateUserParams struct {
 	UUID         sqlc.UUID
 	Username     string
 	PasswordHash string
+	IsAdmin      bool
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, createUser, arg.UUID, arg.Username, arg.PasswordHash)
+	row := q.db.QueryRowContext(ctx, createUser,
+		arg.UUID,
+		arg.Username,
+		arg.PasswordHash,
+		arg.IsAdmin,
+	)
 	var i User
 	err := row.Scan(
 		&i.UUID,
@@ -32,13 +43,28 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.UpdatedAt,
 		&i.Username,
 		&i.PasswordHash,
+		&i.IsActive,
 		&i.IsAdmin,
 	)
 	return i, err
 }
 
+const deactivateUser = `-- name: DeactivateUser :execrows
+UPDATE users
+SET is_active = 0
+WHERE uuid = ? AND is_active = 1
+`
+
+func (q *Queries) DeactivateUser(ctx context.Context, uuid sqlc.UUID) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deactivateUser, uuid)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const getUserByUUID = `-- name: GetUserByUUID :one
-SELECT uuid, created_at, updated_at, username, password_hash, is_admin FROM users WHERE uuid = ?
+SELECT uuid, created_at, updated_at, username, password_hash, is_active, is_admin FROM users WHERE uuid = ? AND is_active = 1
 `
 
 func (q *Queries) GetUserByUUID(ctx context.Context, uuid sqlc.UUID) (User, error) {
@@ -50,13 +76,14 @@ func (q *Queries) GetUserByUUID(ctx context.Context, uuid sqlc.UUID) (User, erro
 		&i.UpdatedAt,
 		&i.Username,
 		&i.PasswordHash,
+		&i.IsActive,
 		&i.IsAdmin,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT uuid, created_at, updated_at, username, password_hash, is_admin FROM users WHERE username = ?
+SELECT uuid, created_at, updated_at, username, password_hash, is_active, is_admin FROM users WHERE username = ? AND is_active = 1
 `
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
@@ -68,6 +95,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.UpdatedAt,
 		&i.Username,
 		&i.PasswordHash,
+		&i.IsActive,
 		&i.IsAdmin,
 	)
 	return i, err

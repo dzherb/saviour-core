@@ -14,6 +14,7 @@ import (
 	"saviour/internal/repository"
 	sqliterepo "saviour/internal/repository/sqlite"
 	"saviour/internal/service/auth"
+	"saviour/internal/service/user"
 	"saviour/internal/transport/rest"
 	"saviour/internal/transport/rest/handler"
 )
@@ -38,7 +39,8 @@ var (
 		"repository.session",
 	)
 
-	AuthServiceDependency = DefineDependency[*auth.Auth]("auth")
+	AuthServiceDependency = DefineDependency[*auth.ServiceImpl]("service.auth")
+	UserServiceDependency = DefineDependency[*user.ServiceImpl]("service.user")
 )
 
 type InstanceComponent struct {
@@ -108,6 +110,7 @@ func (c *ServerComponent) Start(ctx context.Context, cfg *koanf.Koanf) error {
 	c.log = LogDependency.MustGet(c.di)
 	instance := InstanceDependency.MustGet(c.di)
 	authService := AuthServiceDependency.MustGet(c.di)
+	userService := UserServiceDependency.MustGet(c.di)
 
 	h := rest.RootHandler(
 		c.log,
@@ -117,6 +120,10 @@ func (c *ServerComponent) Start(ctx context.Context, cfg *koanf.Koanf) error {
 				c.log,
 				authService,
 				[]netip.Prefix{},
+			),
+			handler.NewUserHandler(
+				c.log,
+				userService,
 			),
 		),
 		authService,
@@ -237,6 +244,28 @@ func (c *AuthServiceComponent) Start(
 	authService := auth.New(log, userRepo, sessionRepo, authCfg)
 
 	AuthServiceDependency.Set(c.di, authService)
+
+	return nil
+}
+
+type UserServiceComponent struct {
+	di *Container
+}
+
+func NewUserService(di *Container) *UserServiceComponent {
+	return &UserServiceComponent{di: di}
+}
+
+func (c *UserServiceComponent) Start(
+	_ context.Context,
+	_ *koanf.Koanf,
+) error {
+	log := LogDependency.MustGet(c.di)
+	userRepo := UserRepositoryDependency.MustGet(c.di)
+
+	userService := user.NewService(log, userRepo)
+
+	UserServiceDependency.Set(c.di, userService)
 
 	return nil
 }

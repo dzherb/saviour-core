@@ -2,7 +2,6 @@ package sqliterepo_test
 
 import (
 	"context"
-	"database/sql"
 	"net/netip"
 	"testing"
 	"time"
@@ -14,10 +13,12 @@ import (
 	sqliterepo "saviour/internal/repository/sqlite"
 )
 
-func createTestUser(t *testing.T, db *sql.DB) (*model.User, error) {
+func createTestUser(
+	t *testing.T,
+	userRepo repository.UserRepository,
+) (*model.User, error) {
 	t.Helper()
 
-	userRepo := sqliterepo.NewUserRepository(db)
 	userUUID := uuid.New()
 
 	return userRepo.CreateUser(
@@ -31,7 +32,10 @@ func createTestUser(t *testing.T, db *sql.DB) (*model.User, error) {
 }
 
 func (suite *RepositoryTestSuite) TestSessionRepository_CreateSession() {
-	user, err := createTestUser(suite.T(), suite.DB)
+	user, err := createTestUser(
+		suite.T(),
+		sqliterepo.NewUserRepository(suite.DB),
+	)
 
 	suite.Require().Nil(err)
 
@@ -59,7 +63,10 @@ func (suite *RepositoryTestSuite) TestSessionRepository_CreateSession() {
 }
 
 func (suite *RepositoryTestSuite) TestSessionRepository_RefreshSession_OK() {
-	user, err := createTestUser(suite.T(), suite.DB)
+	user, err := createTestUser(
+		suite.T(),
+		sqliterepo.NewUserRepository(suite.DB),
+	)
 	suite.Require().Nil(err)
 
 	sessionRepo := sqliterepo.NewSessionsRepository(suite.DB)
@@ -109,7 +116,10 @@ func (suite *RepositoryTestSuite) TestSessionRepository_RefreshSession_OK() {
 }
 
 func (suite *RepositoryTestSuite) TestSessionRepository_RefreshSession_Revoked() {
-	user, err := createTestUser(suite.T(), suite.DB)
+	user, err := createTestUser(
+		suite.T(),
+		sqliterepo.NewUserRepository(suite.DB),
+	)
 	suite.Require().Nil(err)
 
 	sessionRepo := sqliterepo.NewSessionsRepository(suite.DB)
@@ -156,7 +166,10 @@ func (suite *RepositoryTestSuite) TestSessionRepository_RefreshSession_Revoked()
 }
 
 func (suite *RepositoryTestSuite) TestSessionRepository_RefreshSession_Expired() {
-	user, err := createTestUser(suite.T(), suite.DB)
+	user, err := createTestUser(
+		suite.T(),
+		sqliterepo.NewUserRepository(suite.DB),
+	)
 	suite.Require().Nil(err)
 
 	sessionRepo := sqliterepo.NewSessionsRepository(suite.DB)
@@ -191,5 +204,50 @@ func (suite *RepositoryTestSuite) TestSessionRepository_RefreshSession_Expired()
 	suite.ErrorIs(
 		err, repository.ErrSessionNotFound,
 		"expired session should not be refreshable",
+	)
+}
+
+func (suite *RepositoryTestSuite) TestSessionRepository_RefreshSession_UserDeactivated() {
+	userRepo := sqliterepo.NewUserRepository(suite.DB)
+
+	user, err := createTestUser(
+		suite.T(),
+		userRepo,
+	)
+	suite.Require().Nil(err)
+
+	sessionRepo := sqliterepo.NewSessionsRepository(suite.DB)
+	sessionUUID := uuid.New()
+
+	_, err = sessionRepo.CreateSession(
+		context.Background(),
+		repository.CreateSessionParams{
+			UUID:             sessionUUID,
+			UserUUID:         user.UUID,
+			RefreshTokenHash: "refresh_hash_1",
+			UserAgent:        "test_agent",
+			IP:               netip.MustParseAddr("0.0.0.0"),
+		},
+	)
+
+	suite.Require().NoError(err)
+
+	err = userRepo.DeactivateUser(context.Background(), user.UUID)
+	suite.Require().NoError(err)
+
+	err = sessionRepo.RefreshActiveSession(
+		context.Background(),
+		repository.RefreshActiveSessionParams{
+			UUID:                sessionUUID,
+			RefreshTokenHash:    "refresh_hash_1",
+			NewRefreshTokenHash: "refresh_hash_2",
+			IP:                  netip.MustParseAddr("0.0.0.0"),
+			RefreshTTL:          time.Hour * 100,
+		},
+	)
+
+	suite.ErrorIs(
+		err, repository.ErrSessionNotFound,
+		"session should not be refreshable if the user is not active",
 	)
 }

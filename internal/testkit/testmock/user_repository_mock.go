@@ -6,6 +6,7 @@ package testmock
 
 import (
 	"context"
+	"github.com/google/uuid"
 	mock "github.com/stretchr/testify/mock"
 	"saviour/internal/model"
 	"saviour/internal/repository"
@@ -102,6 +103,63 @@ func (_c *MockUserRepository_CreateUser_Call) Return(user *model.User, err error
 }
 
 func (_c *MockUserRepository_CreateUser_Call) RunAndReturn(run func(ctx context.Context, params repository.CreateUserParams) (*model.User, error)) *MockUserRepository_CreateUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeactivateUser provides a mock function for the type MockUserRepository
+func (_mock *MockUserRepository) DeactivateUser(ctx context.Context, uuid1 uuid.UUID) error {
+	ret := _mock.Called(ctx, uuid1)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeactivateUser")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, uuid1)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockUserRepository_DeactivateUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeactivateUser'
+type MockUserRepository_DeactivateUser_Call struct {
+	*mock.Call
+}
+
+// DeactivateUser is a helper method to define mock.On call
+//   - ctx context.Context
+//   - uuid1 uuid.UUID
+func (_e *MockUserRepository_Expecter) DeactivateUser(ctx interface{}, uuid1 interface{}) *MockUserRepository_DeactivateUser_Call {
+	return &MockUserRepository_DeactivateUser_Call{Call: _e.mock.On("DeactivateUser", ctx, uuid1)}
+}
+
+func (_c *MockUserRepository_DeactivateUser_Call) Run(run func(ctx context.Context, uuid1 uuid.UUID)) *MockUserRepository_DeactivateUser_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockUserRepository_DeactivateUser_Call) Return(err error) *MockUserRepository_DeactivateUser_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockUserRepository_DeactivateUser_Call) RunAndReturn(run func(ctx context.Context, uuid1 uuid.UUID) error) *MockUserRepository_DeactivateUser_Call {
 	_c.Call.Return(run)
 	return _c
 }

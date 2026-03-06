@@ -31,7 +31,7 @@ type Config struct {
 	RefreshTokenSecret secret.Secret
 }
 
-type Auth struct {
+type ServiceImpl struct {
 	log         *slog.Logger
 	userRepo    repository.UserRepository
 	sessionRepo repository.SessionRepository
@@ -44,8 +44,8 @@ func New(
 	userRepo repository.UserRepository,
 	sessionsRepo repository.SessionRepository,
 	cfg Config,
-) *Auth {
-	return &Auth{
+) *ServiceImpl {
+	return &ServiceImpl{
 		log:         log,
 		userRepo:    userRepo,
 		sessionRepo: sessionsRepo,
@@ -62,7 +62,7 @@ type CreateSessionParams struct {
 
 const fakeHash = "$2a$10$7EqJtq98hPqEX7fNZaFWoO7EqJtq98hPqEX7fNZaFWoO7EqJtq98hPq" //nolint:lll
 
-func (a *Auth) CreateSession(
+func (a *ServiceImpl) CreateSession(
 	ctx context.Context,
 	params CreateSessionParams,
 ) (*model.TokenPair, error) {
@@ -119,7 +119,7 @@ type RefreshSessionParams struct {
 	IP           netip.Addr
 }
 
-func (a *Auth) RefreshSession(
+func (a *ServiceImpl) RefreshSession(
 	ctx context.Context,
 	params RefreshSessionParams,
 ) (*model.TokenPair, error) {
@@ -172,10 +172,11 @@ type RevokeSessionParams struct {
 	SessionUUID uuid.UUID
 }
 
-func (a *Auth) RevokeSession(
+func (a *ServiceImpl) RevokeSession(
 	ctx context.Context,
 	params RevokeSessionParams,
 ) error {
+	// todo кэшировать sessionUUID и потом в Authenticator middleware сверять access token
 	err := a.sessionRepo.RevokeSession(
 		ctx,
 		repository.RevokeSessionParams{
@@ -192,15 +193,15 @@ func (a *Auth) RevokeSession(
 	return nil
 }
 
-func (a *Auth) ValidateAccessToken(token string) (*TokenParsed, error) {
+func (a *ServiceImpl) ValidateAccessToken(token string) (*TokenParsed, error) {
 	return validateToken(token, a.cfg.AccessTokenSecret.UnsafeString())
 }
 
-func (a *Auth) ValidateRefreshToken(token string) (*TokenParsed, error) {
+func (a *ServiceImpl) ValidateRefreshToken(token string) (*TokenParsed, error) {
 	return validateToken(token, a.cfg.RefreshTokenSecret.UnsafeString())
 }
 
-func (a *Auth) issueTokenPair(
+func (a *ServiceImpl) issueTokenPair(
 	userUUID, sessionUUID uuid.UUID,
 	roles []Role,
 ) (*model.TokenPair, error) {
@@ -232,7 +233,7 @@ func (a *Auth) issueTokenPair(
 	}, nil
 }
 
-func (a *Auth) userRoles(user *model.User) []Role {
+func (a *ServiceImpl) userRoles(user *model.User) []Role {
 	if user.IsAdmin {
 		return []Role{AdminRole}
 	}

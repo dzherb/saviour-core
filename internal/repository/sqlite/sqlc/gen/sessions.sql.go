@@ -58,9 +58,11 @@ UPDATE sessions
 SET refresh_token_hash = ?1,
     last_refresh_at = unixepoch(),
     ip_last = ?2
-WHERE uuid = ?3
+WHERE sessions.uuid = ?3
   -- make sure a refresh token can only be used once
   AND refresh_token_hash = ?4
+  -- and the user is active
+  AND (SELECT is_active FROM users WHERE users.uuid = user_uuid) = 1
   -- and the session is not revoked
   AND revoked_at IS NULL
   -- or expired
