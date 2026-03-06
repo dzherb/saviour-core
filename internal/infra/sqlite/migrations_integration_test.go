@@ -4,17 +4,17 @@ import (
 	"testing"
 
 	"github.com/pressly/goose/v3"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 
-	"saviour/internal/infra/sqlite"
 	"saviour/internal/testkit"
 )
 
-func TestStairway(t *testing.T) {
-	testkit.SkipIntegrationTestInShortMode(t)
-	t.Parallel()
+type MigrationsTestSuite struct {
+	testkit.InMemorySQLiteSuite
+}
 
-	goose.SetBaseFS(testkit.SQLiteMigrationsFS(t))
+func (suite *MigrationsTestSuite) TestStairway() {
+	goose.SetBaseFS(testkit.SQLiteMigrationsFS(suite.T()))
 
 	_ = goose.SetDialect("sqlite3")
 
@@ -25,31 +25,27 @@ func TestStairway(t *testing.T) {
 		0,
 		goose.MaxVersion,
 	)
-	require.NoError(t, err)
-
-	db, err := sqlite.NewDB(
-		sqlite.Config{
-			DSN: "file::memory:?_pragma=foreign_keys(1)",
-		},
-	)
-	require.NoError(t, err)
-
-	defer func() {
-		_ = db.Close()
-	}()
+	suite.Require().NoError(err)
 
 	for _, m := range migrations {
-		err := goose.UpTo(db, migrationsDir, m.Version)
-		require.NoError(t, err)
+		err := goose.UpTo(suite.DB, migrationsDir, m.Version)
+		suite.Require().NoError(err)
 
 		// down by one
-		err = goose.Down(db, migrationsDir)
-		require.NoError(t, err)
+		err = goose.Down(suite.DB, migrationsDir)
+		suite.Require().NoError(err)
 
-		err = goose.UpTo(db, migrationsDir, m.Version)
-		require.NoError(t, err)
+		err = goose.UpTo(suite.DB, migrationsDir, m.Version)
+		suite.Require().NoError(err)
 
-		err = goose.Reset(db, migrationsDir)
-		require.NoError(t, err)
+		err = goose.Reset(suite.DB, migrationsDir)
+		suite.Require().NoError(err)
 	}
+}
+
+func TestMigrations(t *testing.T) {
+	testkit.SkipIntegrationTestInShortMode(t)
+	t.Parallel()
+
+	suite.Run(t, new(MigrationsTestSuite))
 }

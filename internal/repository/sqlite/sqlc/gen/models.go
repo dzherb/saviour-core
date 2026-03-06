@@ -37,3 +37,10 @@ type Workspace struct {
 	Name       string
 	AuthorUUID sqlc.UUID
 }
+
+type WorkspaceUser struct {
+	CreatedAt     sqlc.UnixTime
+	UpdatedAt     sqlc.UnixTime
+	UserUUID      sqlc.UUID
+	WorkspaceUUID sqlc.UUID
+}

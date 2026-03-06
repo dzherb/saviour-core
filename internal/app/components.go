@@ -15,6 +15,7 @@ import (
 	sqliterepo "saviour/internal/repository/sqlite"
 	"saviour/internal/service/auth"
 	"saviour/internal/service/user"
+	"saviour/internal/service/workspace"
 	"saviour/internal/transport/rest"
 	"saviour/internal/transport/rest/handler"
 )
@@ -38,9 +39,19 @@ var (
 	SessionRepositoryDependency = DefineDependency[repository.SessionRepository](
 		"repository.session",
 	)
+	WorkspaceRepositoryDependency = DefineDependency[repository.WorkspaceRepository]( //nolint:lll
+		"repository.workspace",
+	)
 
-	AuthServiceDependency = DefineDependency[*auth.ServiceImpl]("service.auth")
-	UserServiceDependency = DefineDependency[*user.ServiceImpl]("service.user")
+	AuthServiceDependency = DefineDependency[*auth.ServiceImpl](
+		"service.auth",
+	)
+	UserServiceDependency = DefineDependency[*user.ServiceImpl](
+		"service.user",
+	)
+	WorkspaceServiceDependency = DefineDependency[*workspace.ServiceImpl](
+		"service.workspace",
+	)
 )
 
 type InstanceComponent struct {
@@ -111,6 +122,7 @@ func (c *ServerComponent) Start(ctx context.Context, cfg *koanf.Koanf) error {
 	instance := InstanceDependency.MustGet(c.di)
 	authService := AuthServiceDependency.MustGet(c.di)
 	userService := UserServiceDependency.MustGet(c.di)
+	workspaceService := WorkspaceServiceDependency.MustGet(c.di)
 
 	h := rest.RootHandler(
 		c.log,
@@ -124,6 +136,10 @@ func (c *ServerComponent) Start(ctx context.Context, cfg *koanf.Koanf) error {
 			handler.NewUserHandler(
 				c.log,
 				userService,
+			),
+			handler.NewWorkspaceHandler(
+				c.log,
+				workspaceService,
 			),
 		),
 		authService,
@@ -216,6 +232,10 @@ func (c *RepositoryComponent) Start(_ context.Context, cfg *koanf.Koanf) error {
 		c.di,
 		sqliterepo.NewSessionsRepository(db),
 	)
+	WorkspaceRepositoryDependency.Set(
+		c.di,
+		sqliterepo.NewWorkspaceRepository(db),
+	)
 
 	return nil
 }
@@ -266,6 +286,28 @@ func (c *UserServiceComponent) Start(
 	userService := user.NewService(log, userRepo)
 
 	UserServiceDependency.Set(c.di, userService)
+
+	return nil
+}
+
+type WorkspaceServiceComponent struct {
+	di *Container
+}
+
+func NewWorkspaceService(di *Container) *WorkspaceServiceComponent {
+	return &WorkspaceServiceComponent{di: di}
+}
+
+func (c *WorkspaceServiceComponent) Start(
+	_ context.Context,
+	_ *koanf.Koanf,
+) error {
+	log := LogDependency.MustGet(c.di)
+	workspaceRepo := WorkspaceRepositoryDependency.MustGet(c.di)
+
+	workspaceService := workspace.NewService(log, workspaceRepo)
+
+	WorkspaceServiceDependency.Set(c.di, workspaceService)
 
 	return nil
 }

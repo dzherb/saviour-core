@@ -36,6 +36,7 @@ func Run(cfgPaths []string) error {
 	repositoryComponent := NewRepository(di)
 	authServiceComponent := NewAuthService(di)
 	userServiceComponent := NewUserService(di)
+	workspaceServiceComponent := NewWorkspaceService(di)
 	serverComponent := NewServer(di)
 
 	app := New(LogDependency.MustGet(di))
@@ -46,6 +47,7 @@ func Run(cfgPaths []string) error {
 		repositoryComponent,
 		authServiceComponent,
 		userServiceComponent,
+		workspaceServiceComponent,
 		serverComponent,
 	)
 

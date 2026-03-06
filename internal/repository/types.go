@@ -21,6 +21,10 @@ type DBTX interface {
 	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
 }
 
+var (
+	ErrForeignKeyViolation = errors.New("foreign key violation")
+)
+
 type UserRepository interface {
 	CreateUser(
 		ctx context.Context,
@@ -90,4 +94,49 @@ type RefreshActiveSessionParams struct {
 type RevokeSessionParams struct {
 	UUID     uuid.UUID
 	UserUUID uuid.UUID
+}
+
+type WorkspaceRepository interface {
+	CreateWorkspace(
+		ctx context.Context,
+		params CreateWorkspaceParams,
+	) (*model.Workspace, error)
+	UpdateWorkspace(
+		ctx context.Context,
+		params UpdateWorkspaceParams,
+	) (*model.Workspace, error)
+	AddUserToWorkspace(
+		ctx context.Context,
+		params AddUserToWorkspaceParams,
+	) error
+	RemoveUserFromWorkspace(
+		ctx context.Context,
+		params RemoveUserFromWorkspaceParams,
+	) error
+}
+
+var (
+	ErrWorkspaceNotFound     = errors.New("workspace not found")
+	ErrWorkspaceUserNotFound = errors.New("workspace user not found")
+)
+
+type CreateWorkspaceParams struct {
+	UUID       uuid.UUID
+	Name       string
+	AuthorUUID uuid.UUID
+}
+
+type UpdateWorkspaceParams struct {
+	UUID uuid.UUID
+	Name string
+}
+
+type AddUserToWorkspaceParams struct {
+	UserUUID      uuid.UUID
+	WorkspaceUUID uuid.UUID
+}
+
+type RemoveUserFromWorkspaceParams struct {
+	UserUUID      uuid.UUID
+	WorkspaceUUID uuid.UUID
 }

@@ -33,6 +33,11 @@ type AccessTokenResponse struct {
 	AccessToken string `json:"access_token"`
 }
 
+// AddUserToWorkspaceRequest defines model for AddUserToWorkspaceRequest.
+type AddUserToWorkspaceRequest struct {
+	UserUUID UUID `json:"user_uuid"`
+}
+
 // AuthenticationErrorResponse defines model for AuthenticationErrorResponse.
 type AuthenticationErrorResponse = ErrorResponse
 
@@ -53,6 +58,9 @@ type CreateUserRequest struct {
 	// Username Must be unique
 	Username string `json:"username"`
 }
+
+// CreateWorkspaceRequest defines model for CreateWorkspaceRequest.
+type CreateWorkspaceRequest = WorkspaceRequestCommon
 
 // EmptyResponse defines model for EmptyResponse.
 type EmptyResponse = empty
@@ -98,24 +106,46 @@ type TimeoutErrorResponse = ErrorResponse
 // UUID defines model for UUID.
 type UUID = uuid.UUID
 
+// UpdateWorkspaceRequest defines model for UpdateWorkspaceRequest.
+type UpdateWorkspaceRequest = WorkspaceRequestCommon
+
 // UserResponse defines model for UserResponse.
 type UserResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 	IsAdmin   bool      `json:"is_admin"`
-
-	// Username Must be unique
-	Username string `json:"username"`
-	UUID     UUID   `json:"uuid"`
+	Username  string    `json:"username"`
+	UUID      UUID      `json:"uuid"`
 }
 
 // ValidationErrorResponse defines model for ValidationErrorResponse.
 type ValidationErrorResponse = ErrorResponse
+
+// WorkspaceRequestCommon defines model for WorkspaceRequestCommon.
+type WorkspaceRequestCommon struct {
+	Name string `json:"name"`
+}
+
+// WorkspaceResponse defines model for WorkspaceResponse.
+type WorkspaceResponse struct {
+	CreatedAt time.Time `json:"created_at"`
+	Name      string    `json:"name"`
+	UUID      UUID      `json:"uuid"`
+}
 
 // CreateSessionJSONRequestBody defines body for CreateSession for application/json ContentType.
 type CreateSessionJSONRequestBody = CreateSessionRequest
 
 // CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
 type CreateUserJSONRequestBody = CreateUserRequest
+
+// CreateWorkspaceJSONRequestBody defines body for CreateWorkspace for application/json ContentType.
+type CreateWorkspaceJSONRequestBody = CreateWorkspaceRequest
+
+// UpdateWorkspaceJSONRequestBody defines body for UpdateWorkspace for application/json ContentType.
+type UpdateWorkspaceJSONRequestBody = UpdateWorkspaceRequest
+
+// AddUserToWorkspaceJSONRequestBody defines body for AddUserToWorkspace for application/json ContentType.
+type AddUserToWorkspaceJSONRequestBody = AddUserToWorkspaceRequest
 
 type CreateSessionRequestObject struct {
 	Body *CreateSessionJSONRequestBody
@@ -205,6 +235,69 @@ func (r EmptyResponse) VisitDeactivateUserResponse(w http.ResponseWriter) error 
 	return json.NewEncoder(w).Encode(r)
 }
 
+type CreateWorkspaceRequestObject struct {
+	Body *CreateWorkspaceJSONRequestBody
+}
+
+type CreateWorkspaceResponseObject interface {
+	VisitCreateWorkspaceResponse(w http.ResponseWriter) error
+}
+
+func (r WorkspaceResponse) VisitCreateWorkspaceResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(r)
+}
+
+type UpdateWorkspaceRequestObject struct {
+	WorkspaceUUID UUID `json:"workspace_uuid"`
+	Body          *UpdateWorkspaceJSONRequestBody
+}
+
+type UpdateWorkspaceResponseObject interface {
+	VisitUpdateWorkspaceResponse(w http.ResponseWriter) error
+}
+
+func (r WorkspaceResponse) VisitUpdateWorkspaceResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(r)
+}
+
+type AddUserToWorkspaceRequestObject struct {
+	WorkspaceUUID UUID `json:"workspace_uuid"`
+	Body          *AddUserToWorkspaceJSONRequestBody
+}
+
+type AddUserToWorkspaceResponseObject interface {
+	VisitAddUserToWorkspaceResponse(w http.ResponseWriter) error
+}
+
+func (r EmptyResponse) VisitAddUserToWorkspaceResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(r)
+}
+
+type RemoveUserFromWorkspaceRequestObject struct {
+	WorkspaceUUID UUID `json:"workspace_uuid"`
+	UserUUID      UUID `json:"user_uuid"`
+}
+
+type RemoveUserFromWorkspaceResponseObject interface {
+	VisitRemoveUserFromWorkspaceResponse(w http.ResponseWriter) error
+}
+
+func (r EmptyResponse) VisitRemoveUserFromWorkspaceResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(204)
+
+	return json.NewEncoder(w).Encode(r)
+}
+
 // HandlerInterface represents all server handlers.
 type HandlerInterface interface {
 	// Create a new session
@@ -225,6 +318,18 @@ type HandlerInterface interface {
 	// Deactivate a user
 	// (POST /users/{user_uuid}/deactivate)
 	DeactivateUser(w http.ResponseWriter, r *http.Request, request DeactivateUserRequestObject) (DeactivateUserResponseObject, error)
+	// Create a workspace
+	// (POST /workspaces)
+	CreateWorkspace(w http.ResponseWriter, r *http.Request, request CreateWorkspaceRequestObject) (CreateWorkspaceResponseObject, error)
+	// Update a workspace
+	// (PUT /workspaces/{workspace_uuid})
+	UpdateWorkspace(w http.ResponseWriter, r *http.Request, request UpdateWorkspaceRequestObject) (UpdateWorkspaceResponseObject, error)
+	// Add a user to a workspace
+	// (POST /workspaces/{workspace_uuid}/users)
+	AddUserToWorkspace(w http.ResponseWriter, r *http.Request, request AddUserToWorkspaceRequestObject) (AddUserToWorkspaceResponseObject, error)
+	// Remove a user from a workspace
+	// (DELETE /workspaces/{workspace_uuid}/users/{user_uuid})
+	RemoveUserFromWorkspace(w http.ResponseWriter, r *http.Request, request RemoveUserFromWorkspaceRequestObject) (RemoveUserFromWorkspaceResponseObject, error)
 }
 
 // HandlerInterfaceWrapper converts contexts to parameters.
@@ -387,6 +492,152 @@ func (hiw *HandlerInterfaceWrapper) DeactivateUser(w http.ResponseWriter, r *htt
 	}
 }
 
+// CreateWorkspace operation middleware
+func (hiw *HandlerInterfaceWrapper) CreateWorkspace(w http.ResponseWriter, r *http.Request) {
+
+	var request CreateWorkspaceRequestObject
+
+	var body CreateWorkspaceJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		hiw.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	response, err := hiw.handler.CreateWorkspace(w, r, request)
+
+	if err != nil {
+		hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		return
+	}
+
+	if response != nil {
+		if err := response.VisitCreateWorkspaceResponse(w); err != nil {
+			hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	}
+}
+
+// UpdateWorkspace operation middleware
+func (hiw *HandlerInterfaceWrapper) UpdateWorkspace(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "workspace_uuid" -------------
+	var workspaceUUID UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspace_uuid", r.PathValue("workspace_uuid"), &workspaceUUID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		hiw.options.RequestErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspace_uuid", Err: err})
+		return
+	}
+
+	var request UpdateWorkspaceRequestObject
+
+	request.WorkspaceUUID = workspaceUUID
+
+	var body UpdateWorkspaceJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		hiw.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	response, err := hiw.handler.UpdateWorkspace(w, r, request)
+
+	if err != nil {
+		hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		return
+	}
+
+	if response != nil {
+		if err := response.VisitUpdateWorkspaceResponse(w); err != nil {
+			hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	}
+}
+
+// AddUserToWorkspace operation middleware
+func (hiw *HandlerInterfaceWrapper) AddUserToWorkspace(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "workspace_uuid" -------------
+	var workspaceUUID UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspace_uuid", r.PathValue("workspace_uuid"), &workspaceUUID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		hiw.options.RequestErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspace_uuid", Err: err})
+		return
+	}
+
+	var request AddUserToWorkspaceRequestObject
+
+	request.WorkspaceUUID = workspaceUUID
+
+	var body AddUserToWorkspaceJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		hiw.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	response, err := hiw.handler.AddUserToWorkspace(w, r, request)
+
+	if err != nil {
+		hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		return
+	}
+
+	if response != nil {
+		if err := response.VisitAddUserToWorkspaceResponse(w); err != nil {
+			hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	}
+}
+
+// RemoveUserFromWorkspace operation middleware
+func (hiw *HandlerInterfaceWrapper) RemoveUserFromWorkspace(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "workspace_uuid" -------------
+	var workspaceUUID UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspace_uuid", r.PathValue("workspace_uuid"), &workspaceUUID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		hiw.options.RequestErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspace_uuid", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "user_uuid" -------------
+	var userUUID UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "user_uuid", r.PathValue("user_uuid"), &userUUID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		hiw.options.RequestErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "user_uuid", Err: err})
+		return
+	}
+
+	var request RemoveUserFromWorkspaceRequestObject
+
+	request.WorkspaceUUID = workspaceUUID
+	request.UserUUID = userUUID
+
+	response, err := hiw.handler.RemoveUserFromWorkspace(w, r, request)
+
+	if err != nil {
+		hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		return
+	}
+
+	if response != nil {
+		if err := response.VisitRemoveUserFromWorkspaceResponse(w); err != nil {
+			hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	}
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -475,12 +726,16 @@ type Options struct {
 }
 
 const (
-	CreateSessionPath  = "/auth/sessions"
-	RefreshSessionPath = "/auth/sessions/refresh"
-	RevokeSessionPath  = "/auth/sessions/{session_id}/revoke"
-	PingPath           = "/ping"
-	CreateUserPath     = "/users"
-	DeactivateUserPath = "/users/{user_uuid}/deactivate"
+	CreateSessionPath           = "/auth/sessions"
+	RefreshSessionPath          = "/auth/sessions/refresh"
+	RevokeSessionPath           = "/auth/sessions/{session_id}/revoke"
+	PingPath                    = "/ping"
+	CreateUserPath              = "/users"
+	DeactivateUserPath          = "/users/{user_uuid}/deactivate"
+	CreateWorkspacePath         = "/workspaces"
+	UpdateWorkspacePath         = "/workspaces/{workspace_uuid}"
+	AddUserToWorkspacePath      = "/workspaces/{workspace_uuid}/users"
+	RemoveUserFromWorkspacePath = "/workspaces/{workspace_uuid}/users/{user_uuid}"
 )
 
 // HandlerWithOptions creates http.Handler with additional options
@@ -502,6 +757,10 @@ func HandlerWithOptions(hi HandlerInterface, options Options) http.Handler {
 	m.HandleFunc("GET "+options.BaseURL+PingPath, wrapper.Ping)
 	m.HandleFunc("POST "+options.BaseURL+CreateUserPath, wrapper.CreateUser)
 	m.HandleFunc("POST "+options.BaseURL+DeactivateUserPath, wrapper.DeactivateUser)
+	m.HandleFunc("POST "+options.BaseURL+CreateWorkspacePath, wrapper.CreateWorkspace)
+	m.HandleFunc("PUT "+options.BaseURL+UpdateWorkspacePath, wrapper.UpdateWorkspace)
+	m.HandleFunc("POST "+options.BaseURL+AddUserToWorkspacePath, wrapper.AddUserToWorkspace)
+	m.HandleFunc("DELETE "+options.BaseURL+RemoveUserFromWorkspacePath, wrapper.RemoveUserFromWorkspace)
 
 	return m
 }
@@ -509,37 +768,42 @@ func HandlerWithOptions(hi HandlerInterface, options Options) http.Handler {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

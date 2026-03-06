@@ -61,6 +61,8 @@ tags:
     description: Session operations
   - name: users
     description: User operations
+  - name: workspaces
+    description: Workspace operations
 
 paths:
   "/ping":
@@ -193,7 +195,7 @@ paths:
         <<: [
           *validation-error-response,
           *authentication-error-response,
-          *not-found-error-response,
+          *role-required-error-response,
           *timeout-error-response,
           *server-error-response,
         ]
@@ -224,6 +226,141 @@ paths:
           *authentication-error-response,
           *role-required-error-response,
           *not-found-error-response,
+          *timeout-error-response,
+          *server-error-response,
+        ]
+  "/workspaces":
+    post:
+      summary: Create a workspace
+      description: Create a user
+      tags:
+        - workspaces
+      security:
+        - BearerAuth: [ admin ]
+      operationId: create_workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorkspaceRequest"
+      responses:
+        "200":
+          description: workspace response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceResponse"
+        <<: [
+          *validation-error-response,
+          *authentication-error-response,
+          *role-required-error-response,
+          *timeout-error-response,
+          *server-error-response,
+        ]
+  "/workspaces/{workspace_uuid}":
+    put:
+      summary: Update a workspace
+      description: Update a user
+      tags:
+        - workspaces
+      security:
+        - BearerAuth: [ admin ]
+      operationId: update_workspace
+      parameters:
+        - name: workspace_uuid
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWorkspaceRequest"
+      responses:
+        "200":
+          description: workspace response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceResponse"
+        <<: [
+          *validation-error-response,
+          *authentication-error-response,
+          *role-required-error-response,
+          *not-found-error-response,
+          *timeout-error-response,
+          *server-error-response,
+        ]
+  "/workspaces/{workspace_uuid}/users":
+    post:
+      summary: Add a user to a workspace
+      description: Add a user to a workspace
+      tags:
+        - workspaces
+      security:
+        - BearerAuth: [ admin ]
+      operationId: add_user_to_workspace
+      parameters:
+        - name: workspace_uuid
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddUserToWorkspaceRequest"
+      responses:
+        "200":
+          description: user added response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyResponse"
+        <<: [
+          *validation-error-response,
+          *authentication-error-response,
+          *role-required-error-response,
+          *not-found-error-response,
+          *timeout-error-response,
+          *server-error-response,
+        ]
+  "/workspaces/{workspace_uuid}/users/{user_uuid}":
+    delete:
+      summary: Remove a user from a workspace
+      description: Remove a user from a workspace
+      tags:
+        - workspaces
+      security:
+        - BearerAuth: [ admin ]
+      operationId: remove_user_from_workspace
+      parameters:
+        - name: workspace_uuid
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: user_uuid
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        "204":
+          description: user removed from workspace
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyResponse"
+        <<: [
+          *validation-error-response,
+          *authentication-error-response,
+          *role-required-error-response,
           *timeout-error-response,
           *server-error-response,
         ]
@@ -317,12 +454,53 @@ components:
           format: date-time
         username:
           type: string
-          description: Must be unique
           minLength: 5
           example: admin
         is_admin:
           type: boolean
           example: true
+
+    WorkspaceRequestCommon:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 4
+          maxLength: 64
+          example: "Demo App Backups"
+
+    CreateWorkspaceRequest:
+      $ref: "#/components/schemas/WorkspaceRequestCommon"
+
+    UpdateWorkspaceRequest:
+      $ref: "#/components/schemas/WorkspaceRequestCommon"
+
+    WorkspaceResponse:
+      type: object
+      required:
+        - uuid
+        - created_at
+        - name
+      properties:
+        uuid:
+          $ref: "#/components/schemas/UUID"
+        created_at:
+          type: string
+          format: date-time
+        name:
+          type: string
+          minLength: 5
+          example: "Demo App Backups"
+
+    AddUserToWorkspaceRequest:
+      type: object
+      required:
+        - user_uuid
+      properties:
+        user_uuid:
+          $ref: "#/components/schemas/UUID"
 
     UUID:
       type: string
