@@ -15,7 +15,7 @@ func TestSecretString(t *testing.T) {
 
 	s := secret.New("super_secret")
 
-	assert.Equal(t, "super_secret", s.UnsafeString())
+	assert.Equal(t, "super_secret", s.UnsafeValue())
 	assert.Equal(t, "*****", s.String())
 	assert.Equal(t, "*****", s.LogValue().String())
 	assert.Equal(t, "*****", fmt.Sprint(s))

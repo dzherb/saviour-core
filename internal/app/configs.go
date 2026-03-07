@@ -7,6 +7,7 @@ import (
 	"github.com/knadh/koanf/v2"
 
 	"saviour/internal/infra/logger"
+	"saviour/internal/infra/secretkey"
 	"saviour/internal/infra/sqlite"
 	"saviour/internal/service/auth"
 	"saviour/internal/transport/rest"
@@ -52,6 +53,19 @@ func appConfig(k *koanf.Koanf) (Config, error) {
 
 	if cfg.Instance == "" {
 		return cfg, valueRequiredError(instanceKey)
+	}
+
+	return cfg, nil
+}
+
+func secretKeyConfig(k *koanf.Koanf) (secretkey.Config, error) {
+	const secretKey = "secret_key"
+
+	cfg := secretkey.Config{}
+
+	cfg.Key = secret.New(k.String(secretKey))
+	if cfg.Key.UnsafeValue() == "" {
+		return cfg, valueRequiredError(secretKey)
 	}
 
 	return cfg, nil
@@ -146,12 +160,12 @@ func authConfig(k *koanf.Koanf) (auth.Config, error) {
 	var cfg auth.Config
 
 	cfg.AccessTokenSecret = secret.New(k.String(accessTokenSecretKey))
-	if cfg.AccessTokenSecret.UnsafeString() == "" {
+	if cfg.AccessTokenSecret.UnsafeValue() == "" {
 		return cfg, valueRequiredError(accessTokenSecretKey)
 	}
 
 	cfg.RefreshTokenSecret = secret.New(k.String(refreshTokenSecretKey))
-	if cfg.RefreshTokenSecret.UnsafeString() == "" {
+	if cfg.RefreshTokenSecret.UnsafeValue() == "" {
 		return cfg, valueRequiredError(refreshTokenSecretKey)
 	}
 

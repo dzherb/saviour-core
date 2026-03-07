@@ -62,8 +62,8 @@ func (h *WorkspaceHandler) UpdateWorkspace(
 ) (api.UpdateWorkspaceResponseObject, error) {
 	worksp, err := h.workspaceService.UpdateWorkspace(
 		r.Context(),
+		request.WorkspaceUUID,
 		workspace.UpdateWorkspaceParams{
-			UUID: request.WorkspaceUUID,
 			Name: request.Body.Name,
 		},
 	)
@@ -96,10 +96,8 @@ func (h *WorkspaceHandler) AddUserToWorkspace(
 ) (api.AddUserToWorkspaceResponseObject, error) {
 	err := h.workspaceService.AddUserToWorkspace(
 		r.Context(),
-		workspace.AddUserToWorkspaceParams{
-			UserUUID:      request.Body.UserUUID,
-			WorkspaceUUID: request.WorkspaceUUID,
-		},
+		request.Body.UserUUID,
+		request.WorkspaceUUID,
 	)
 	if err == nil {
 		return api.EmptyResponse{}, nil
@@ -130,10 +128,8 @@ func (h *WorkspaceHandler) RemoveUserFromWorkspace(
 ) (api.RemoveUserFromWorkspaceResponseObject, error) {
 	err := h.workspaceService.RemoveUserFromWorkspace(
 		r.Context(),
-		workspace.RemoveUserFromWorkspaceParams{
-			UserUUID:      request.UserUUID,
-			WorkspaceUUID: request.WorkspaceUUID,
-		},
+		request.UserUUID,
+		request.WorkspaceUUID,
 	)
 
 	if err == nil || errors.Is(err, workspace.ErrWorkspaceUserNotFound) {

@@ -47,13 +47,14 @@ func (r *WorkspaceRepository) CreateWorkspace(
 
 func (r *WorkspaceRepository) UpdateWorkspace(
 	ctx context.Context,
+	workspaceUUID uuid.UUID,
 	params repository.UpdateWorkspaceParams,
 ) (*model.Workspace, error) {
 	workspace, err := r.txAwareQueries(ctx).
 		UpdateWorkspace(
 			ctx,
 			sqlitequery.UpdateWorkspaceParams{
-				UUID: sqlc.UUID(params.UUID),
+				UUID: sqlc.UUID(workspaceUUID),
 				Name: params.Name,
 			},
 		)
@@ -70,14 +71,15 @@ func (r *WorkspaceRepository) UpdateWorkspace(
 
 func (r *WorkspaceRepository) AddUserToWorkspace(
 	ctx context.Context,
-	params repository.AddUserToWorkspaceParams,
+	userUUID uuid.UUID,
+	workspaceUUID uuid.UUID,
 ) error {
 	err := r.txAwareQueries(ctx).
 		AddUserToWorkspace(
 			ctx,
 			sqlitequery.AddUserToWorkspaceParams{
-				UserUUID:      sqlc.UUID(params.UserUUID),
-				WorkspaceUUID: sqlc.UUID(params.WorkspaceUUID),
+				UserUUID:      sqlc.UUID(userUUID),
+				WorkspaceUUID: sqlc.UUID(workspaceUUID),
 			},
 		)
 	if err != nil {
@@ -93,14 +95,15 @@ func (r *WorkspaceRepository) AddUserToWorkspace(
 
 func (r *WorkspaceRepository) RemoveUserFromWorkspace(
 	ctx context.Context,
-	params repository.RemoveUserFromWorkspaceParams,
+	userUUID uuid.UUID,
+	workspaceUUID uuid.UUID,
 ) error {
 	rowsAffected, err := r.txAwareQueries(ctx).
 		RemoveUserFromWorkspace(
 			ctx,
 			sqlitequery.RemoveUserFromWorkspaceParams{
-				UserUUID:      sqlc.UUID(params.UserUUID),
-				WorkspaceUUID: sqlc.UUID(params.WorkspaceUUID),
+				UserUUID:      sqlc.UUID(userUUID),
+				WorkspaceUUID: sqlc.UUID(workspaceUUID),
 			},
 		)
 	if err != nil {
@@ -112,6 +115,20 @@ func (r *WorkspaceRepository) RemoveUserFromWorkspace(
 	}
 
 	return nil
+}
+
+func (r *WorkspaceRepository) DoesUserBelongToWorkspace(
+	ctx context.Context,
+	userUUID uuid.UUID,
+	workspaceUUID uuid.UUID,
+) (bool, error) {
+	return r.txAwareQueries(ctx).DoesUserBelongToWorkspace(
+		ctx,
+		sqlitequery.DoesUserBelongToWorkspaceParams{
+			UserUUID:      sqlc.UUID(userUUID),
+			WorkspaceUUID: sqlc.UUID(workspaceUUID),
+		},
+	)
 }
 
 func mapWorkspace(workspace *sqlitequery.Workspace) *model.Workspace {

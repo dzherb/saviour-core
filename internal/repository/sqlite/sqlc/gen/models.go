@@ -8,6 +8,16 @@ import (
 	"saviour/internal/repository/sqlite/sqlc"
 )
 
+type Secret struct {
+	UUID           sqlc.UUID
+	CreatedAt      sqlc.UnixTime
+	UpdatedAt      sqlc.UnixTime
+	Name           string
+	ValueEncrypted []byte
+	AuthorUUID     sqlc.UUID
+	WorkspaceUUID  sqlc.UUID
+}
+
 type Session struct {
 	UUID             sqlc.UUID
 	CreatedAt        sqlc.UnixTime

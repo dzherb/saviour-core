@@ -23,15 +23,18 @@ type Service interface {
 	) (*model.Workspace, error)
 	UpdateWorkspace(
 		ctx context.Context,
+		workspaceUUID uuid.UUID,
 		params UpdateWorkspaceParams,
 	) (*model.Workspace, error)
 	AddUserToWorkspace(
 		ctx context.Context,
-		params AddUserToWorkspaceParams,
+		userUUID uuid.UUID,
+		workspaceUUID uuid.UUID,
 	) error
 	RemoveUserFromWorkspace(
 		ctx context.Context,
-		params RemoveUserFromWorkspaceParams,
+		userUUID uuid.UUID,
+		workspaceUUID uuid.UUID,
 	) error
 }
 
@@ -41,7 +44,3 @@ type CreateWorkspaceParams struct {
 }
 
 type UpdateWorkspaceParams repository.UpdateWorkspaceParams
-
-type AddUserToWorkspaceParams repository.AddUserToWorkspaceParams
-
-type RemoveUserFromWorkspaceParams repository.RemoveUserFromWorkspaceParams

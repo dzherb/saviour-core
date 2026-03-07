@@ -103,16 +103,24 @@ type WorkspaceRepository interface {
 	) (*model.Workspace, error)
 	UpdateWorkspace(
 		ctx context.Context,
+		workspaceUUID uuid.UUID,
 		params UpdateWorkspaceParams,
 	) (*model.Workspace, error)
 	AddUserToWorkspace(
 		ctx context.Context,
-		params AddUserToWorkspaceParams,
+		userUUID uuid.UUID,
+		workspaceUUID uuid.UUID,
 	) error
 	RemoveUserFromWorkspace(
 		ctx context.Context,
-		params RemoveUserFromWorkspaceParams,
+		userUUID uuid.UUID,
+		workspaceUUID uuid.UUID,
 	) error
+	DoesUserBelongToWorkspace(
+		ctx context.Context,
+		userUUID uuid.UUID,
+		workspaceUUID uuid.UUID,
+	) (bool, error)
 }
 
 var (
@@ -127,16 +135,43 @@ type CreateWorkspaceParams struct {
 }
 
 type UpdateWorkspaceParams struct {
-	UUID uuid.UUID
 	Name string
 }
 
-type AddUserToWorkspaceParams struct {
-	UserUUID      uuid.UUID
-	WorkspaceUUID uuid.UUID
+type SecretRepository interface {
+	CreateSecret(
+		ctx context.Context,
+		params CreateSecretParams,
+	) (*model.Secret, error)
+	UpdateSecret(
+		ctx context.Context,
+		secretUUID uuid.UUID,
+		params UpdateSecretParams,
+	) (*model.Secret, error)
+	RenameSecret(
+		ctx context.Context,
+		secretUUID uuid.UUID,
+		params RenameSecretParams,
+	) (*model.Secret, error)
 }
 
-type RemoveUserFromWorkspaceParams struct {
-	UserUUID      uuid.UUID
-	WorkspaceUUID uuid.UUID
+var (
+	ErrSecretNotFound = errors.New("secret not found")
+)
+
+type CreateSecretParams struct {
+	UUID           uuid.UUID
+	Name           string
+	AuthorUUID     uuid.UUID
+	WorkspaceUUID  uuid.UUID
+	ValueEncrypted []byte
+}
+
+type UpdateSecretParams struct {
+	Name           string
+	ValueEncrypted []byte
+}
+
+type RenameSecretParams struct {
+	Name string
 }

@@ -31,23 +31,27 @@ func Run(cfgPaths []string) error {
 	// so initiate it manually first...
 	_ = logComponent.Start(context.TODO(), cfg)
 
-	instanceComponent := NewInstance(di)
+	instanceMetaComponent := NewInstanceMeta(di)
 	dbComponent := NewDB(di)
 	repositoryComponent := NewRepository(di)
 	authServiceComponent := NewAuthService(di)
+	aclServiceComponent := NewACLService(di)
 	userServiceComponent := NewUserService(di)
 	workspaceServiceComponent := NewWorkspaceService(di)
+	secretServiceComponent := NewSecretService(di)
 	serverComponent := NewServer(di)
 
 	app := New(LogDependency.MustGet(di))
 
 	app.RegisterStartQueue(
-		instanceComponent,
+		instanceMetaComponent,
 		dbComponent,
 		repositoryComponent,
 		authServiceComponent,
+		aclServiceComponent,
 		userServiceComponent,
 		workspaceServiceComponent,
+		secretServiceComponent,
 		serverComponent,
 	)
 

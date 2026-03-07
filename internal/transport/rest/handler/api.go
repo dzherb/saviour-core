@@ -9,6 +9,7 @@ type APIHandler struct {
 	*AuthHandler
 	*UserHandler
 	*WorkspaceHandler
+	*SecretHandler
 }
 
 var _ api.HandlerInterface = new(APIHandler)
@@ -18,11 +19,13 @@ func NewAPIHandler(
 	auth *AuthHandler,
 	user *UserHandler,
 	workspace *WorkspaceHandler,
+	secret *SecretHandler,
 ) *APIHandler {
 	return &APIHandler{
 		PingHandler:      ping,
 		AuthHandler:      auth,
 		UserHandler:      user,
 		WorkspaceHandler: workspace,
+		SecretHandler:    secret,
 	}
 }

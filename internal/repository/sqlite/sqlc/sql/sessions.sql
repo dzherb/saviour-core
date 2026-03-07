@@ -6,7 +6,8 @@ INSERT INTO sessions (
     user_agent,
     ip_last
 )
-VALUES (?, ?, ?, ?, sqlc.arg('IP')) RETURNING *;
+VALUES (?, ?, ?, ?, sqlc.arg('IP'))
+RETURNING *;
 
 -- name: RefreshActiveSession :execrows
 UPDATE sessions

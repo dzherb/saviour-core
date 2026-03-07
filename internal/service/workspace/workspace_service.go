@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log/slog"
 
+	"github.com/google/uuid"
+
 	"saviour/internal/model"
 	"saviour/internal/repository"
 )
@@ -39,11 +41,15 @@ func (s ServiceImpl) CreateWorkspace(
 
 func (s ServiceImpl) UpdateWorkspace(
 	ctx context.Context,
+	workspaceUUID uuid.UUID,
 	params UpdateWorkspaceParams,
 ) (*model.Workspace, error) {
 	workspace, err := s.workspaceRepo.UpdateWorkspace(
 		ctx,
-		repository.UpdateWorkspaceParams(params),
+		workspaceUUID,
+		repository.UpdateWorkspaceParams{
+			Name: params.Name,
+		},
 	)
 	if err != nil {
 		if errors.Is(err, repository.ErrWorkspaceNotFound) {
@@ -58,11 +64,13 @@ func (s ServiceImpl) UpdateWorkspace(
 
 func (s ServiceImpl) AddUserToWorkspace(
 	ctx context.Context,
-	params AddUserToWorkspaceParams,
+	userUUID uuid.UUID,
+	workspaceUUID uuid.UUID,
 ) error {
 	err := s.workspaceRepo.AddUserToWorkspace(
 		ctx,
-		repository.AddUserToWorkspaceParams(params),
+		userUUID,
+		workspaceUUID,
 	)
 	if err != nil {
 		if errors.Is(err, repository.ErrForeignKeyViolation) {
@@ -77,11 +85,13 @@ func (s ServiceImpl) AddUserToWorkspace(
 
 func (s ServiceImpl) RemoveUserFromWorkspace(
 	ctx context.Context,
-	params RemoveUserFromWorkspaceParams,
+	userUUID uuid.UUID,
+	workspaceUUID uuid.UUID,
 ) error {
 	err := s.workspaceRepo.RemoveUserFromWorkspace(
 		ctx,
-		repository.RemoveUserFromWorkspaceParams(params),
+		userUUID,
+		workspaceUUID,
 	)
 	if err != nil {
 		if errors.Is(err, repository.ErrWorkspaceUserNotFound) {

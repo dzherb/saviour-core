@@ -87,7 +87,7 @@ func TestAuth_RefreshSession_OK(t *testing.T) {
 
 	cfg := testConfig()
 	refreshToken, _ := auth.IssueToken(
-		cfg.RefreshTokenSecret.UnsafeString(),
+		cfg.RefreshTokenSecret.UnsafeValue(),
 		userID,
 		sessionID,
 		nil,
@@ -131,7 +131,7 @@ func TestAuth_RefreshSession_SessionNotFound(t *testing.T) {
 
 	cfg := testConfig()
 	refreshToken, _ := auth.IssueToken(
-		cfg.RefreshTokenSecret.UnsafeString(),
+		cfg.RefreshTokenSecret.UnsafeValue(),
 		uuid.New(),
 		uuid.New(),
 		nil,

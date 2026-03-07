@@ -25,13 +25,13 @@ x-error-responses:
         application/json:
           schema:
             $ref: "#/components/schemas/AuthenticationErrorResponse"
-  role-required-error-response: &role-required-error-response
+  access-forbidden-error-response: &access-forbidden-error-response
     "403":
-      description: forbidden error
+      description: access to resource forbidden error
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/RoleRequiredErrorResponse"
+            $ref: "#/components/schemas/AccessForbiddenErrorResponse"
   not-found-error-response: &not-found-error-response
     "404":
       description: entity not found error
@@ -63,6 +63,14 @@ tags:
     description: User operations
   - name: workspaces
     description: Workspace operations
+  - name: secrets
+    description: Secret operations
+  - name: sources
+    description: Backup source operations
+  - name: storages
+    description: Backup storage operations
+  - name: pipelines
+    description: Backup pipeline operations
 
 paths:
   "/ping":
@@ -195,7 +203,7 @@ paths:
         <<: [
           *validation-error-response,
           *authentication-error-response,
-          *role-required-error-response,
+          *access-forbidden-error-response,
           *timeout-error-response,
           *server-error-response,
         ]
@@ -224,7 +232,7 @@ paths:
         <<: [
           *validation-error-response,
           *authentication-error-response,
-          *role-required-error-response,
+          *access-forbidden-error-response,
           *not-found-error-response,
           *timeout-error-response,
           *server-error-response,
@@ -254,7 +262,7 @@ paths:
         <<: [
           *validation-error-response,
           *authentication-error-response,
-          *role-required-error-response,
+          *access-forbidden-error-response,
           *timeout-error-response,
           *server-error-response,
         ]
@@ -289,7 +297,7 @@ paths:
         <<: [
           *validation-error-response,
           *authentication-error-response,
-          *role-required-error-response,
+          *access-forbidden-error-response,
           *not-found-error-response,
           *timeout-error-response,
           *server-error-response,
@@ -325,7 +333,7 @@ paths:
         <<: [
           *validation-error-response,
           *authentication-error-response,
-          *role-required-error-response,
+          *access-forbidden-error-response,
           *not-found-error-response,
           *timeout-error-response,
           *server-error-response,
@@ -360,7 +368,80 @@ paths:
         <<: [
           *validation-error-response,
           *authentication-error-response,
-          *role-required-error-response,
+          *access-forbidden-error-response,
+          *timeout-error-response,
+          *server-error-response,
+        ]
+  "/workspaces/{workspace_uuid}/secrets":
+    post:
+      summary: Create a secret
+      description: Create a secret
+      tags:
+        - secrets
+      operationId: create_secret
+      parameters:
+        - name: workspace_uuid
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSecretRequest"
+      responses:
+        "200":
+          description: secret response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecretResponse"
+        <<: [
+          *validation-error-response,
+          *authentication-error-response,
+          *access-forbidden-error-response,
+          *not-found-error-response,
+          *timeout-error-response,
+          *server-error-response,
+        ]
+  "/workspaces/{workspace_uuid}/secrets/{secret_uuid}":
+    put:
+      summary: Update a secret
+      description: Update a secret
+      tags:
+        - secrets
+      operationId: update_secret
+      parameters:
+        - name: workspace_uuid
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: secret_uuid
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSecretRequest"
+      responses:
+        "200":
+          description: secret response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecretResponse"
+        <<: [
+          *validation-error-response,
+          *authentication-error-response,
+          *access-forbidden-error-response,
+          *not-found-error-response,
           *timeout-error-response,
           *server-error-response,
         ]
@@ -502,6 +583,48 @@ components:
         user_uuid:
           $ref: "#/components/schemas/UUID"
 
+    SecretRequestCommon:
+      type: object
+      required:
+        - name
+        - value
+      properties:
+        name:
+          type: string
+          minLength: 4
+          maxLength: 64
+          example: "Google API key"
+        value:
+          type: string
+          minLength: 1
+          description: Secret value to store. It'll be encrypted and never displayed as is
+          example: "my_secret_value"
+
+    CreateSecretRequest:
+      $ref: "#/components/schemas/SecretRequestCommon"
+
+    UpdateSecretRequest:
+      $ref: "#/components/schemas/SecretRequestCommon"
+
+    SecretResponse:
+      type: object
+      required:
+        - uuid
+        - created_at
+        - name
+        - author_uuid
+      properties:
+        uuid:
+          $ref: "#/components/schemas/UUID"
+        created_at:
+          type: string
+          format: date-time
+        name:
+          type: string
+          example: "Google API key"
+        author_uuid:
+          $ref: "#/components/schemas/UUID"
+
     UUID:
       type: string
       format: uuid
@@ -550,7 +673,7 @@ components:
                     - ACCESS_TOKEN_EXPIRED
                   example: ACCESS_TOKEN_NOT_VALID
 
-    RoleRequiredErrorResponse:
+    AccessForbiddenErrorResponse:
       allOf:
         - $ref: "#/components/schemas/ErrorResponse"
         - type: object
@@ -559,8 +682,8 @@ components:
               properties:
                 type:
                   enum:
-                    - ROLE_REQUIRED
-                  example: ROLE_REQUIRED
+                    - ACCESS_FORBIDDEN
+                  example: ACCESS_FORBIDDEN
 
     CreateSessionErrorResponse:
       allOf:

@@ -27,6 +27,13 @@ const (
 	RefreshTokenCookieScopes = "RefreshTokenCookie.Scopes"
 )
 
+// AccessForbiddenErrorResponse defines model for AccessForbiddenErrorResponse.
+type AccessForbiddenErrorResponse struct {
+	Error struct {
+		Type interface{} `json:"type,omitempty"`
+	} `json:"error"`
+}
+
 // AccessTokenResponse defines model for AccessTokenResponse.
 type AccessTokenResponse struct {
 	// AccessToken Short-lived token for accessing protected endpoints
@@ -40,6 +47,9 @@ type AddUserToWorkspaceRequest struct {
 
 // AuthenticationErrorResponse defines model for AuthenticationErrorResponse.
 type AuthenticationErrorResponse = ErrorResponse
+
+// CreateSecretRequest defines model for CreateSecretRequest.
+type CreateSecretRequest = SecretRequestCommon
 
 // CreateSessionErrorResponse defines model for CreateSessionErrorResponse.
 type CreateSessionErrorResponse = ErrorResponse
@@ -100,11 +110,30 @@ type RefreshSessionErrorResponse = ErrorResponse
 // RoleRequiredErrorResponse defines model for RoleRequiredErrorResponse.
 type RoleRequiredErrorResponse = ErrorResponse
 
+// SecretRequestCommon defines model for SecretRequestCommon.
+type SecretRequestCommon struct {
+	Name string `json:"name"`
+
+	// Value Secret value to store. It'll be encrypted and never displayed as is
+	Value string `json:"value"`
+}
+
+// SecretResponse defines model for SecretResponse.
+type SecretResponse struct {
+	AuthorUUID UUID      `json:"author_uuid"`
+	CreatedAt  time.Time `json:"created_at"`
+	Name       string    `json:"name"`
+	UUID       UUID      `json:"uuid"`
+}
+
 // TimeoutErrorResponse defines model for TimeoutErrorResponse.
 type TimeoutErrorResponse = ErrorResponse
 
 // UUID defines model for UUID.
 type UUID = uuid.UUID
+
+// UpdateSecretRequest defines model for UpdateSecretRequest.
+type UpdateSecretRequest = SecretRequestCommon
 
 // UpdateWorkspaceRequest defines model for UpdateWorkspaceRequest.
 type UpdateWorkspaceRequest = WorkspaceRequestCommon
@@ -143,6 +172,12 @@ type CreateWorkspaceJSONRequestBody = CreateWorkspaceRequest
 
 // UpdateWorkspaceJSONRequestBody defines body for UpdateWorkspace for application/json ContentType.
 type UpdateWorkspaceJSONRequestBody = UpdateWorkspaceRequest
+
+// CreateSecretJSONRequestBody defines body for CreateSecret for application/json ContentType.
+type CreateSecretJSONRequestBody = CreateSecretRequest
+
+// UpdateSecretJSONRequestBody defines body for UpdateSecret for application/json ContentType.
+type UpdateSecretJSONRequestBody = UpdateSecretRequest
 
 // AddUserToWorkspaceJSONRequestBody defines body for AddUserToWorkspace for application/json ContentType.
 type AddUserToWorkspaceJSONRequestBody = AddUserToWorkspaceRequest
@@ -266,6 +301,39 @@ func (r WorkspaceResponse) VisitUpdateWorkspaceResponse(w http.ResponseWriter) e
 	return json.NewEncoder(w).Encode(r)
 }
 
+type CreateSecretRequestObject struct {
+	WorkspaceUUID UUID `json:"workspace_uuid"`
+	Body          *CreateSecretJSONRequestBody
+}
+
+type CreateSecretResponseObject interface {
+	VisitCreateSecretResponse(w http.ResponseWriter) error
+}
+
+func (r SecretResponse) VisitCreateSecretResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(r)
+}
+
+type UpdateSecretRequestObject struct {
+	WorkspaceUUID UUID `json:"workspace_uuid"`
+	SecretUUID    UUID `json:"secret_uuid"`
+	Body          *UpdateSecretJSONRequestBody
+}
+
+type UpdateSecretResponseObject interface {
+	VisitUpdateSecretResponse(w http.ResponseWriter) error
+}
+
+func (r SecretResponse) VisitUpdateSecretResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(r)
+}
+
 type AddUserToWorkspaceRequestObject struct {
 	WorkspaceUUID UUID `json:"workspace_uuid"`
 	Body          *AddUserToWorkspaceJSONRequestBody
@@ -324,6 +392,12 @@ type HandlerInterface interface {
 	// Update a workspace
 	// (PUT /workspaces/{workspace_uuid})
 	UpdateWorkspace(w http.ResponseWriter, r *http.Request, request UpdateWorkspaceRequestObject) (UpdateWorkspaceResponseObject, error)
+	// Create a secret
+	// (POST /workspaces/{workspace_uuid}/secrets)
+	CreateSecret(w http.ResponseWriter, r *http.Request, request CreateSecretRequestObject) (CreateSecretResponseObject, error)
+	// Update a secret
+	// (PUT /workspaces/{workspace_uuid}/secrets/{secret_uuid})
+	UpdateSecret(w http.ResponseWriter, r *http.Request, request UpdateSecretRequestObject) (UpdateSecretResponseObject, error)
 	// Add a user to a workspace
 	// (POST /workspaces/{workspace_uuid}/users)
 	AddUserToWorkspace(w http.ResponseWriter, r *http.Request, request AddUserToWorkspaceRequestObject) (AddUserToWorkspaceResponseObject, error)
@@ -557,6 +631,94 @@ func (hiw *HandlerInterfaceWrapper) UpdateWorkspace(w http.ResponseWriter, r *ht
 	}
 }
 
+// CreateSecret operation middleware
+func (hiw *HandlerInterfaceWrapper) CreateSecret(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "workspace_uuid" -------------
+	var workspaceUUID UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspace_uuid", r.PathValue("workspace_uuid"), &workspaceUUID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		hiw.options.RequestErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspace_uuid", Err: err})
+		return
+	}
+
+	var request CreateSecretRequestObject
+
+	request.WorkspaceUUID = workspaceUUID
+
+	var body CreateSecretJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		hiw.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	response, err := hiw.handler.CreateSecret(w, r, request)
+
+	if err != nil {
+		hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		return
+	}
+
+	if response != nil {
+		if err := response.VisitCreateSecretResponse(w); err != nil {
+			hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	}
+}
+
+// UpdateSecret operation middleware
+func (hiw *HandlerInterfaceWrapper) UpdateSecret(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "workspace_uuid" -------------
+	var workspaceUUID UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspace_uuid", r.PathValue("workspace_uuid"), &workspaceUUID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		hiw.options.RequestErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspace_uuid", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "secret_uuid" -------------
+	var secretUUID UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "secret_uuid", r.PathValue("secret_uuid"), &secretUUID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		hiw.options.RequestErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "secret_uuid", Err: err})
+		return
+	}
+
+	var request UpdateSecretRequestObject
+
+	request.WorkspaceUUID = workspaceUUID
+	request.SecretUUID = secretUUID
+
+	var body UpdateSecretJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		hiw.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	response, err := hiw.handler.UpdateSecret(w, r, request)
+
+	if err != nil {
+		hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		return
+	}
+
+	if response != nil {
+		if err := response.VisitUpdateSecretResponse(w); err != nil {
+			hiw.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	}
+}
+
 // AddUserToWorkspace operation middleware
 func (hiw *HandlerInterfaceWrapper) AddUserToWorkspace(w http.ResponseWriter, r *http.Request) {
 
@@ -734,6 +896,8 @@ const (
 	DeactivateUserPath          = "/users/{user_uuid}/deactivate"
 	CreateWorkspacePath         = "/workspaces"
 	UpdateWorkspacePath         = "/workspaces/{workspace_uuid}"
+	CreateSecretPath            = "/workspaces/{workspace_uuid}/secrets"
+	UpdateSecretPath            = "/workspaces/{workspace_uuid}/secrets/{secret_uuid}"
 	AddUserToWorkspacePath      = "/workspaces/{workspace_uuid}/users"
 	RemoveUserFromWorkspacePath = "/workspaces/{workspace_uuid}/users/{user_uuid}"
 )
@@ -759,6 +923,8 @@ func HandlerWithOptions(hi HandlerInterface, options Options) http.Handler {
 	m.HandleFunc("POST "+options.BaseURL+DeactivateUserPath, wrapper.DeactivateUser)
 	m.HandleFunc("POST "+options.BaseURL+CreateWorkspacePath, wrapper.CreateWorkspace)
 	m.HandleFunc("PUT "+options.BaseURL+UpdateWorkspacePath, wrapper.UpdateWorkspace)
+	m.HandleFunc("POST "+options.BaseURL+CreateSecretPath, wrapper.CreateSecret)
+	m.HandleFunc("PUT "+options.BaseURL+UpdateSecretPath, wrapper.UpdateSecret)
 	m.HandleFunc("POST "+options.BaseURL+AddUserToWorkspacePath, wrapper.AddUserToWorkspace)
 	m.HandleFunc("DELETE "+options.BaseURL+RemoveUserFromWorkspacePath, wrapper.RemoveUserFromWorkspace)
 
@@ -768,42 +934,48 @@ func HandlerWithOptions(hi HandlerInterface, options Options) http.Handler {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/+xbbXPbNhL+KxhcZ+7DUZYTp52Mvim2PNXVsXV66ct4fBqYXEmoSYIBQMeuhv+9A4Di",
-	"Kyg5qWwrLb+JxALYXew+eBaE1thlQcRCCKXAvTUW7goCon/2XReEmLI7CMcgIhYKUK8jziLgkoIWIlpo",
-	"LpWUevZAuJxGkrIQ9/Bkxbjs+PQePKRF0IJxZPrQcIkiziS4EjwEoRcxqpRwsHyMAPewkJyGS5wkDubw",
-	"KaYcPNy7Ls94k0mz29/BlThxcN/zZgL4lP3C+J2IiAtj+BSDkHXtYwF8HsfUUw/fcVjgHv5XN/dIN3VH",
-	"dzYbntU0yXtb1YjlCkJJXaKcMeCc8aIbie9fLXDvevu85W6JUzUAVHvdLqPMGkMYB0rT/unpYDKZT69+",
-	"GlzOL6+m85/7F8Mz7JQbBr+OhuPBmbIGHkgQ+cqghq5JorxRNXpdeePgh86SddKXFWNuEgefciASJioc",
-	"XttHw0tt2fx0PDgbXE6H/YtJ2RM2gedwQ2O0RkSIz4zrYM3VmsQ/AJ+AOz6ZYgcH5OECwqVc4d4P72qp",
-	"5OiYDUmgLS/Inrx1cESkBK7S9v/XpPPHzX++25mL2WhOrpwtF4x9KisbjaNiTryApiCyILEvcW9BfAHZ",
-	"eLeM+UDCojs74o5GHabxhvgdDSHAcU/yGBLnazwW0HDz+H6H/8pY9zEWEt0CikP6KVYeyScsuKni88Js",
-	"37/ACuxGxI1tufJnEDDUjyL0gbh3cSS2uuzdLn31+DYFB0EkH0vJ73nULOuooGE5Iqz5BWokPWQoqXy8",
-	"ZPKcxaH3uuiiAGP6mwbQ86vZZQVka617wpWazU/SPQAhyNIS4no4tGkuGVBpKQfBExNWiTHuqceTxMFC",
-	"EhmLucs8iyo/TqcjZCSQlnDwgvGASNzDNJQnb3Ml1AxL4Lgw/NvMudVxh57asxcUOGILJFeAtJOQli5Z",
-	"/Gv/4+hiMB+Mx1fj+fS30WCb2eWXqRZvqsmRTlI0/KYh1k2eGr9/YN5jLdHM2qog+AgeJbPIZ8Q7pyHx",
-	"6R+wJRe+MMJGNFw2BxgNhSSha/HzJQlg42EB/B44yoQtsGtE5pLakHdi+uvGQhh4REInfbkdlAozFyey",
-	"wdQYFhzE6iAYy3hwPh5Mfixws8lA7Wj19xu6V26x8r2mzntCpDHz9eajXP/K3ru6GMzHg//NLD4oNe3J",
-	"8ikNgMXytUNmMrq6nAzm0+HHwdVsWl37SuueTNfVU2+dp6YumrbDpRI50h2LuwcNIsYNbSGKb+Allav4",
-	"9shlQXfJ2NKHrh5bqT2LvMOmPIYPN2GnqxmbNyey5LotqOaUSHRmjtlaKxy6QmVz203/KjOt8+CvLprN",
-	"0hesc4okNrPA5rCfiU+9AyinNSL2p8Ory/l5f3hRhY96857yqBrLpywIWHhAEV1QcJ9h/TR7XjBgGxyg",
-	"iYobcyofJ2pIY/EHIBx4P1aarfGtfjrf2P3fX9SOrRXQ6albcx+spIwKtEMfxp0ydkfB0Cvcw6553HgJ",
-	"cyOaHpBlI5GI/gSKJiqYCBesTqP6oyHisAAOKQmj0pTL5J6ymKP+aIgdfA9cGPnjo+OjN0o5FkFIIop7",
-	"+OTo+OhYl6JypW3vkliuusKwJXOIwQwGl+c25SkiKITPKBXHemSu833oZUKTrJWbLND0V0UWCyWEenAS",
-	"RX568Nb9XZgUMYu8KwSsJzFJOSbSwwWexrg26+3x8d50sB28ahXKPjMRufEW4jms4Xd71KYJdC0apQuC",
-	"7rMuaEGoD54pooxmb55nrXYqR0OtFnI56BqP+CJX6/s9OmynJmm9U5j83d4mt7JM61KZNl01sVhutClA",
-	"GO5d3zhYxEFA+GNzjkqyFPpcvnTejW/UUOX076bQ1AwDKczpqtCNOYdQbmY6Qlmj/pBABYIHyYn+erDg",
-	"LEAGCEUNNsolG379xE3d0JC5+8uPbbXqE9Qq5Oz+4nPbmZxFJ9DiKGQSLVSHNmN3ZOzaShWub5JSKm/J",
-	"sy/L6HX6a069pMvhnt3BtuxW7Yg0bvBGIE/UiHASgAQutGWa7ui6LyM7+fS4ukM7T/R/SvpunhEXymfb",
-	"1rXVnvnnbuXbPpZatCtHZotU3w5SFSCoBgZbcSdSdVxvjZdgKx9IqD+9CcUFGEcErYD4cuWuwL2rwczI",
-	"nDY9W7qXzsQt/lGmlHK8jZDd7FM5Ve9Xqkw1NhRCxix3Giqx0DvGzlpTyTUUmTPT9HwVZvFb+AuXl6Vj",
-	"R8viKLe0W9DXb0En+yPwjR9LLAotGL+lngdhu/Ps5MjFI7nr9Mi7QpGrKLFBGgMuBaDprrN7YEnXA+JK",
-	"ek/kFhp8lsk0YVAukeLQbiKc30X7lnmwhp7ch16LPt8w+rRk/G8GiTbgssHi581XoL9IwrKvSc/KxGof",
-	"iF+YjtW/mVlWMXNpS8xaYtYSM40cnwvwsIGhAvRUsai7zn4bsqbBKbZgk7k40oRNlWslT2Jn5Zn3QtH2",
-	"D4cN92VaOGzhsGWKLUZ/CUZnCPpXMXrXWV7f81KcRpJV5ivDdv1fYX8f5G7+x9sLg/fTCnzieeC1yN0i",
-	"d4vcB4fc2wD16wG8eEZqQNwHCbYbAgG73zBvc6tnG6YbcQV955wFrwnszksfyr57Yczm2tXpTat8RVrs",
-	"bg8h/okwuROo7Fi5dSYzhfaTQa2Y++kV8F636zOX+CsmZO/98fvjLokoVvLpPLa73Gaof4v0LgTKsFPk",
-	"CJV+N1f4Vf1PnbmKZOtUuZ9R76wQ2drTsPl6hwy6rb0KPlQmP3T0unVKiFjWqSKhBA4ODBIHh0x2NHex",
-	"6ntwzEpVDsyHzmYrs2p9KPiW/WnUouUrIl/i4BR9rHodFCjmW6t1pQ9z20+S5M8AAAD//62TugLURgAA",
+	"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",
+	"dJhdAvxYAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

@@ -19,7 +19,8 @@ INSERT INTO sessions (
     user_agent,
     ip_last
 )
-VALUES (?, ?, ?, ?, ?5) RETURNING uuid, created_at, updated_at, user_uuid, refresh_token_hash, revoked_at, last_refresh_at, user_agent, ip_last
+VALUES (?, ?, ?, ?, ?5)
+RETURNING uuid, created_at, updated_at, user_uuid, refresh_token_hash, revoked_at, last_refresh_at, user_agent, ip_last
 `
 
 type CreateSessionParams struct {

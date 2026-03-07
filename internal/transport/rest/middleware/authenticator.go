@@ -70,7 +70,7 @@ func Authenticator( //nolint:gocognit
 						log, w, r,
 						api.NewErrorResponse(
 							http.StatusForbidden,
-							api.RoleRequiredErrorType,
+							api.AccessForbiddenErrorType,
 							fmt.Sprintf(
 								`User role "%s" is required`,
 								requiredRole,

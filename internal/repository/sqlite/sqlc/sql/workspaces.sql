@@ -24,3 +24,12 @@ VALUES (?, ?);
 DELETE FROM workspace_users
 WHERE user_uuid = ?
   AND workspace_uuid = ?;
+
+-- name: DoesUserBelongToWorkspace :one
+SELECT CAST(
+  EXISTS(
+    SELECT 1
+    FROM workspace_users
+    WHERE user_uuid = ? AND workspace_uuid = ?
+  ) AS BOOLEAN
+);

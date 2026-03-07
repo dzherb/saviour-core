@@ -24,7 +24,7 @@ const (
 	RefreshTokenNotSetErrorType   ErrorType = "REFRESH_TOKEN_NOT_SET"
 	RefreshTokenNotValidErrorType ErrorType = "REFRESH_TOKEN_NOT_VALID"
 	RefreshTokenExpiredErrorType  ErrorType = "REFRESH_TOKEN_EXPIRED" //nolint:gosec,lll
-	RoleRequiredErrorType         ErrorType = "ROLE_REQUIRED"
+	AccessForbiddenErrorType      ErrorType = "ACCESS_FORBIDDEN"
 )
 
 type errorResponse interface {
@@ -62,6 +62,12 @@ var DefaultInternalError = NewErrorResponse( //nolint:errname
 	http.StatusInternalServerError,
 	InternalErrorType,
 	"Something went wrong",
+)
+
+var WorkspaceResourceForbiddenError = NewErrorResponse( //nolint:errname
+	http.StatusForbidden,
+	AccessForbiddenErrorType,
+	"Permission required to access this workspace resource",
 )
 
 type ErrorHandler struct {

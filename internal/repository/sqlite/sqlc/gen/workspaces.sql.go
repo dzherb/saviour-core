@@ -58,6 +58,28 @@ func (q *Queries) CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams
 	return i, err
 }
 
+const doesUserBelongToWorkspace = `-- name: DoesUserBelongToWorkspace :one
+SELECT CAST(
+  EXISTS(
+    SELECT 1
+    FROM workspace_users
+    WHERE user_uuid = ? AND workspace_uuid = ?
+  ) AS BOOLEAN
+)
+`
+
+type DoesUserBelongToWorkspaceParams struct {
+	UserUUID      sqlc.UUID
+	WorkspaceUUID sqlc.UUID
+}
+
+func (q *Queries) DoesUserBelongToWorkspace(ctx context.Context, arg DoesUserBelongToWorkspaceParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, doesUserBelongToWorkspace, arg.UserUUID, arg.WorkspaceUUID)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const removeUserFromWorkspace = `-- name: RemoveUserFromWorkspace :execrows
 DELETE FROM workspace_users
 WHERE user_uuid = ?

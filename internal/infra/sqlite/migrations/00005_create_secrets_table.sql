@@ -1,31 +1,32 @@
 -- +goose Up
-CREATE TABLE workspace_users
+CREATE TABLE secrets
 (
+    uuid UUID_BLOB PRIMARY KEY,
     created_at UNIXTIME_INT NOT NULL DEFAULT (unixepoch()),
     updated_at UNIXTIME_INT NOT NULL DEFAULT (unixepoch()),
 
-    user_uuid UUID_BLOB NOT NULL,
+    name TEXT NOT NULL CHECK ( length(name) != 0 ),
+    value_encrypted BLOB NOT NULL,
+    author_uuid UUID_BLOB NOT NULL,
     workspace_uuid UUID_BLOB NOT NULL,
 
-    PRIMARY KEY (user_uuid, workspace_uuid),
-
-    FOREIGN KEY (user_uuid) REFERENCES users(uuid) ON DELETE CASCADE,
+    FOREIGN KEY (author_uuid) REFERENCES users(uuid) ON DELETE CASCADE,
     FOREIGN KEY (workspace_uuid) REFERENCES workspaces(uuid) ON DELETE CASCADE
 ) WITHOUT ROWID;
 
 -- +goose StatementBegin
-CREATE TRIGGER workspace_users_set_updated_at_trigger
-    AFTER UPDATE ON workspace_users
+CREATE TRIGGER secrets_set_updated_at_trigger
+    AFTER UPDATE ON secrets
     FOR EACH ROW
     WHEN OLD.updated_at = NEW.updated_at
 BEGIN
-    UPDATE workspace_users
+    UPDATE secrets
     SET updated_at = unixepoch()
     WHERE uuid = OLD.uuid;
 END;
 -- +goose StatementEnd
 
 -- +goose Down
-DROP TRIGGER workspace_users_set_updated_at_trigger;
+DROP TRIGGER secrets_set_updated_at_trigger;
 
-DROP TABLE workspace_users;
+DROP TABLE secrets;

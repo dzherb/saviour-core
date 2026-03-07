@@ -27,8 +27,8 @@ const (
 )
 
 type Config struct {
-	AccessTokenSecret  secret.Secret
-	RefreshTokenSecret secret.Secret
+	AccessTokenSecret  secret.Secret[string]
+	RefreshTokenSecret secret.Secret[string]
 }
 
 type ServiceImpl struct {
@@ -192,12 +192,22 @@ func (a *ServiceImpl) RevokeSession(
 	return nil
 }
 
-func (a *ServiceImpl) ValidateAccessToken(token string) (*TokenParsed, error) {
-	return validateToken(token, a.cfg.AccessTokenSecret.UnsafeString())
+func (a *ServiceImpl) ValidateAccessToken(
+	token string,
+) (*TokenParsed, error) {
+	return validateToken(
+		token,
+		a.cfg.AccessTokenSecret.UnsafeValue(),
+	)
 }
 
-func (a *ServiceImpl) ValidateRefreshToken(token string) (*TokenParsed, error) {
-	return validateToken(token, a.cfg.RefreshTokenSecret.UnsafeString())
+func (a *ServiceImpl) ValidateRefreshToken(
+	token string,
+) (*TokenParsed, error) {
+	return validateToken(
+		token,
+		a.cfg.RefreshTokenSecret.UnsafeValue(),
+	)
 }
 
 func (a *ServiceImpl) issueTokenPair(
@@ -205,7 +215,7 @@ func (a *ServiceImpl) issueTokenPair(
 	roles []Role,
 ) (*model.TokenPair, error) {
 	accessToken, err := issueToken(
-		a.cfg.AccessTokenSecret.UnsafeString(),
+		a.cfg.AccessTokenSecret.UnsafeValue(),
 		userUUID,
 		sessionUUID,
 		roles,
@@ -216,7 +226,7 @@ func (a *ServiceImpl) issueTokenPair(
 	}
 
 	refreshToken, err := issueToken(
-		a.cfg.RefreshTokenSecret.UnsafeString(),
+		a.cfg.RefreshTokenSecret.UnsafeValue(),
 		userUUID,
 		sessionUUID,
 		roles,

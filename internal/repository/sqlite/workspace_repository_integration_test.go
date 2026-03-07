@@ -14,10 +14,8 @@ func (suite *RepositoryTestSuite) TestWorkspaceRepository_AddUser_FKViolation() 
 
 	err := workspaceRepo.AddUserToWorkspace(
 		context.Background(),
-		repository.AddUserToWorkspaceParams{
-			UserUUID:      uuid.New(),
-			WorkspaceUUID: uuid.New(),
-		},
+		uuid.New(),
+		uuid.New(),
 	)
 
 	suite.ErrorIs(err, repository.ErrForeignKeyViolation)
@@ -28,10 +26,8 @@ func (suite *RepositoryTestSuite) TestWorkspaceRepository_RemoveUser_NotFound() 
 
 	err := workspaceRepo.RemoveUserFromWorkspace(
 		context.Background(),
-		repository.RemoveUserFromWorkspaceParams{
-			UserUUID:      uuid.New(),
-			WorkspaceUUID: uuid.New(),
-		},
+		uuid.New(),
+		uuid.New(),
 	)
 
 	suite.ErrorIs(err, repository.ErrWorkspaceUserNotFound)

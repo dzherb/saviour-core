@@ -159,7 +159,7 @@ func PropagateFatalError(ctx context.Context, err error) {
 	}
 }
 
-func Instance(ctx context.Context) string {
+func InstanceFromCtx(ctx context.Context) string {
 	app, ok := ctx.Value(appCtxKey{}).(*App)
 	if ok {
 		return app.cfg.Instance

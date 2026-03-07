@@ -9,15 +9,19 @@ import (
 
 	"github.com/knadh/koanf/v2"
 
+	"saviour/internal/infra/secretkey"
 	"saviour/internal/infra/sqlite"
 	"saviour/internal/logger"
 	"saviour/internal/repository"
 	sqliterepo "saviour/internal/repository/sqlite"
+	"saviour/internal/service/acl"
 	"saviour/internal/service/auth"
+	secretservice "saviour/internal/service/secret"
 	"saviour/internal/service/user"
 	"saviour/internal/service/workspace"
 	"saviour/internal/transport/rest"
 	"saviour/internal/transport/rest/handler"
+	"saviour/pkg/secret"
 )
 
 type Starter interface {
@@ -29,9 +33,10 @@ type Stopper interface {
 }
 
 var (
-	InstanceDependency = DefineDependency[string]("instance")
-	LogDependency      = DefineDependency[*slog.Logger]("log")
-	DBDependency       = DefineDependency[*sql.DB]("db")
+	InstanceDependency  = DefineDependency[string]("instance")
+	SecretKeyDependency = DefineDependency[secret.Secret[[]byte]]("secret_key")
+	LogDependency       = DefineDependency[*slog.Logger]("log")
+	DBDependency        = DefineDependency[*sql.DB]("db")
 
 	UserRepositoryDependency = DefineDependency[repository.UserRepository](
 		"repository.user",
@@ -42,9 +47,15 @@ var (
 	WorkspaceRepositoryDependency = DefineDependency[repository.WorkspaceRepository]( //nolint:lll
 		"repository.workspace",
 	)
+	SecretRepositoryDependency = DefineDependency[repository.SecretRepository](
+		"repository.secret",
+	)
 
 	AuthServiceDependency = DefineDependency[*auth.ServiceImpl](
 		"service.auth",
+	)
+	ACLServiceDependency = DefineDependency[*acl.ServiceImpl](
+		"service.acl",
 	)
 	UserServiceDependency = DefineDependency[*user.ServiceImpl](
 		"service.user",
@@ -52,20 +63,32 @@ var (
 	WorkspaceServiceDependency = DefineDependency[*workspace.ServiceImpl](
 		"service.workspace",
 	)
+	SecretServiceDependency = DefineDependency[*secretservice.ServiceImpl](
+		"service.secret",
+	)
 )
 
-type InstanceComponent struct {
+type InstanceMetaComponent struct {
 	di *Container
 }
 
-func NewInstance(di *Container) *InstanceComponent {
-	return &InstanceComponent{
+func NewInstanceMeta(di *Container) *InstanceMetaComponent {
+	return &InstanceMetaComponent{
 		di: di,
 	}
 }
 
-func (c *InstanceComponent) Start(ctx context.Context, _ *koanf.Koanf) error {
-	InstanceDependency.Set(c.di, Instance(ctx))
+func (c *InstanceMetaComponent) Start(
+	ctx context.Context,
+	cfg *koanf.Koanf,
+) error {
+	secretKeyCfg, err := secretKeyConfig(cfg)
+	if err != nil {
+		return err
+	}
+
+	InstanceDependency.Set(c.di, InstanceFromCtx(ctx))
+	SecretKeyDependency.Set(c.di, secretkey.New(secretKeyCfg))
 
 	return nil
 }
@@ -121,8 +144,10 @@ func (c *ServerComponent) Start(ctx context.Context, cfg *koanf.Koanf) error {
 	c.log = LogDependency.MustGet(c.di)
 	instance := InstanceDependency.MustGet(c.di)
 	authService := AuthServiceDependency.MustGet(c.di)
+	aclService := ACLServiceDependency.MustGet(c.di)
 	userService := UserServiceDependency.MustGet(c.di)
 	workspaceService := WorkspaceServiceDependency.MustGet(c.di)
+	secretService := SecretServiceDependency.MustGet(c.di)
 
 	h := rest.RootHandler(
 		c.log,
@@ -140,6 +165,11 @@ func (c *ServerComponent) Start(ctx context.Context, cfg *koanf.Koanf) error {
 			handler.NewWorkspaceHandler(
 				c.log,
 				workspaceService,
+			),
+			handler.NewSecretHandler(
+				c.log,
+				aclService,
+				secretService,
 			),
 		),
 		authService,
@@ -236,6 +266,10 @@ func (c *RepositoryComponent) Start(_ context.Context, cfg *koanf.Koanf) error {
 		c.di,
 		sqliterepo.NewWorkspaceRepository(db),
 	)
+	SecretRepositoryDependency.Set(
+		c.di,
+		sqliterepo.NewSecretRepository(db),
+	)
 
 	return nil
 }
@@ -264,6 +298,24 @@ func (c *AuthServiceComponent) Start(
 	authService := auth.New(log, userRepo, sessionRepo, authCfg)
 
 	AuthServiceDependency.Set(c.di, authService)
+
+	return nil
+}
+
+type ACLServiceComponent struct {
+	di *Container
+}
+
+func NewACLService(di *Container) *ACLServiceComponent {
+	return &ACLServiceComponent{di: di}
+}
+
+func (c *ACLServiceComponent) Start(_ context.Context, _ *koanf.Koanf) error {
+	aclService := acl.NewService(
+		WorkspaceRepositoryDependency.MustGet(c.di),
+	)
+
+	ACLServiceDependency.Set(c.di, aclService)
 
 	return nil
 }
@@ -308,6 +360,28 @@ func (c *WorkspaceServiceComponent) Start(
 	workspaceService := workspace.NewService(log, workspaceRepo)
 
 	WorkspaceServiceDependency.Set(c.di, workspaceService)
+
+	return nil
+}
+
+type SecretServiceComponent struct {
+	di *Container
+}
+
+func NewSecretService(di *Container) *SecretServiceComponent {
+	return &SecretServiceComponent{di: di}
+}
+
+func (c *SecretServiceComponent) Start(
+	_ context.Context,
+	_ *koanf.Koanf,
+) error {
+	secretService := secretservice.NewService(
+		SecretKeyDependency.MustGet(c.di),
+		SecretRepositoryDependency.MustGet(c.di),
+	)
+
+	SecretServiceDependency.Set(c.di, secretService)
 
 	return nil
 }

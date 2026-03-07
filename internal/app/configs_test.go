@@ -33,7 +33,7 @@ func TestConfigParsers_NoErrorsOnValidInput(t *testing.T) {
 
 	cfgParsers := []configParser{
 		wrapParser(app.AppConfig),
-		wrapParser(app.LoggerOptions),
+		wrapParser(app.LoggerConfig),
 		wrapParser(app.ServerConfig),
 		wrapParserNoErr(app.APIConfig),
 		wrapParser(app.SQLiteConfig),
