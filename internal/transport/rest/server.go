@@ -46,6 +46,7 @@ func RootHandler(
 	globalMiddlewares := []alice.Constructor{
 		middleware.WithTraceIDCtx(),
 		middleware.Recover(log),
+		middleware.CORS(),
 	}
 
 	apiMiddlewares := []alice.Constructor{

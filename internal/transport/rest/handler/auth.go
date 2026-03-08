@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"errors"
 	"log/slog"
 	"net"
@@ -10,37 +9,21 @@ import (
 	"strings"
 
 	"saviour/internal/logger"
-	"saviour/internal/model"
 	"saviour/internal/service/auth"
 	"saviour/internal/transport/rest/api"
 )
 
 const refreshTokenCookieName = "refresh_token"
 
-type authService interface {
-	CreateSession(
-		ctx context.Context,
-		params auth.CreateSessionParams,
-	) (*model.TokenPair, error)
-	RefreshSession(
-		ctx context.Context,
-		params auth.RefreshSessionParams,
-	) (*model.TokenPair, error)
-	RevokeSession(
-		ctx context.Context,
-		params auth.RevokeSessionParams,
-	) error
-}
-
 type AuthHandler struct {
 	log            *slog.Logger
-	authService    authService
+	authService    auth.Service
 	trustedProxies []netip.Prefix
 }
 
 func NewAuthHandler(
 	log *slog.Logger,
-	authService authService,
+	authService auth.Service,
 	trustedProxies []netip.Prefix,
 ) *AuthHandler {
 	return &AuthHandler{
