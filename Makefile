@@ -1,6 +1,6 @@
 .PHONY: run-core
 run-core:
-	@go tool air -c .air.toml -- --config=./configs/config.dev.json
+	@go tool air -c .air.toml -- run --config ./configs/config.dev.json
 
 .PHONY: test-fast
 test-fast:

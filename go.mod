@@ -16,6 +16,7 @@ require (
 	github.com/oapi-codegen/runtime v1.2.0
 	github.com/pressly/goose/v3 v3.27.0
 	github.com/stretchr/testify v1.11.1
+	github.com/urfave/cli/v3 v3.7.0
 	golang.org/x/crypto v0.48.0
 	modernc.org/sqlite v1.46.1
 )

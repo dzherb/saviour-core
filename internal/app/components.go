@@ -28,6 +28,12 @@ type Starter interface {
 	Start(ctx context.Context, cfg *koanf.Koanf) error
 }
 
+type StarterFunc func(ctx context.Context, cfg *koanf.Koanf) error
+
+func (f StarterFunc) Start(ctx context.Context, cfg *koanf.Koanf) error {
+	return f(ctx, cfg)
+}
+
 type Stopper interface {
 	Stop(ctx context.Context) error
 }

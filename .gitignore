@@ -30,3 +30,6 @@ sqlite.db*
 # Editor/IDE
 .idea/
 .vscode/
+
+# Temporary files
+tmp/
