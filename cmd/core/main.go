@@ -7,7 +7,6 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	"saviour/internal/app"
 	"saviour/internal/command"
 )
 
@@ -28,8 +27,9 @@ func main() {
 			{
 				Name:  "run",
 				Usage: "run the saviour backend",
-				Action: func(_ context.Context, cmd *cli.Command) error {
-					return app.Run(
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					return command.Run(
+						ctx,
 						cmd.StringSlice("config"),
 					)
 				},
@@ -49,8 +49,9 @@ func main() {
 						Aliases:  []string{"p"},
 					},
 				},
-				Action: func(_ context.Context, cmd *cli.Command) error {
+				Action: func(ctx context.Context, cmd *cli.Command) error {
 					return command.CreateAdmin(
+						ctx,
 						cmd.StringSlice("config"),
 						command.CreateAdminParams{
 							Username: cmd.String("username"),

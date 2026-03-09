@@ -48,9 +48,9 @@ func CreateAdmin(
 	repositoryComponent := app.NewRepository(di)
 	userServiceComponent := app.NewUserService(di)
 
-	cmd := app.New(app.LogDependency.MustGet(di))
+	appRunner := app.New(app.LogDependency.MustGet(di))
 
-	cmd.RegisterStartQueue(
+	appRunner.RegisterStartQueue(
 		instanceMetaComponent,
 		dbComponent,
 		repositoryComponent,
@@ -67,11 +67,11 @@ func CreateAdmin(
 		}),
 	)
 
-	cmd.RegisterStopQueue(
+	appRunner.RegisterStopQueue(
 		dbComponent,
 	)
 
-	return cmd.Run(ctx, cfg)
+	return appRunner.Run(ctx, cfg)
 }
 
 func createAdminRunner(

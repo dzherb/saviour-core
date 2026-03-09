@@ -1,4 +1,4 @@
-package app
+package command
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"saviour/internal/app"
 	"saviour/internal/infra/config"
 )
 
@@ -19,32 +20,32 @@ func Run(ctx context.Context, cfgPaths []string) error {
 
 	defer stop()
 
-	di := NewContainer()
+	di := app.NewContainer()
 
 	cfg, err := config.Load(cfgPaths)
 	if err != nil {
 		return fmt.Errorf("error loading config: %w", err)
 	}
 
-	logComponent := NewLog(di)
+	logComponent := app.NewLog(di)
 	// Logger is used internally by the app runner,
 	// so initiate it manually first...
 	_ = logComponent.Start(context.TODO(), cfg)
 
-	instanceMetaComponent := NewInstanceMeta(di)
-	dbComponent := NewDB(di)
-	repositoryComponent := NewRepository(di)
-	authServiceComponent := NewAuthService(di)
-	aclServiceComponent := NewACLService(di)
-	userServiceComponent := NewUserService(di)
-	workspaceServiceComponent := NewWorkspaceService(di)
-	secretServiceComponent := NewSecretService(di)
-	rootHandlerComponent := NewRootHandler(di)
-	serverComponent := NewServer(di)
+	instanceMetaComponent := app.NewInstanceMeta(di)
+	dbComponent := app.NewDB(di)
+	repositoryComponent := app.NewRepository(di)
+	authServiceComponent := app.NewAuthService(di)
+	aclServiceComponent := app.NewACLService(di)
+	userServiceComponent := app.NewUserService(di)
+	workspaceServiceComponent := app.NewWorkspaceService(di)
+	secretServiceComponent := app.NewSecretService(di)
+	rootHandlerComponent := app.NewRootHandler(di)
+	serverComponent := app.NewServer(di)
 
-	app := New(LogDependency.MustGet(di))
+	appRunner := app.New(app.LogDependency.MustGet(di))
 
-	app.RegisterStartQueue(
+	appRunner.RegisterStartQueue(
 		instanceMetaComponent,
 		dbComponent,
 		repositoryComponent,
@@ -59,10 +60,10 @@ func Run(ctx context.Context, cfgPaths []string) error {
 
 	// Gracefully stop the app by stopping the specified components one by one.
 	// shutdown_timeout can be set to force stop the app after N second.
-	app.RegisterStopQueue(
+	appRunner.RegisterStopQueue(
 		serverComponent,
 		dbComponent,
 	)
 
-	return app.Run(ctx, cfg)
+	return appRunner.Run(ctx, cfg)
 }

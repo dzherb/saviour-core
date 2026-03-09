@@ -46,8 +46,10 @@ type StarterStopper interface {
 }
 
 var (
-	InstanceDependency    = DefineDependency[string]("instance")
-	SecretKeyDependency   = DefineDependency[secret.Secret[[]byte]]("secret_key")
+	InstanceDependency  = DefineDependency[string]("instance")
+	SecretKeyDependency = DefineDependency[secret.Secret[[]byte]](
+		"secret_key",
+	)
 	LogDependency         = DefineDependency[*slog.Logger]("log")
 	DBDependency          = DefineDependency[*sql.DB]("db")
 	RootHandlerDependency = DefineDependency[http.Handler]("handler")
@@ -146,7 +148,10 @@ func NewRootHandler(di *Container) *RootHandlerComponent {
 	return &RootHandlerComponent{di: di}
 }
 
-func (c *RootHandlerComponent) Start(_ context.Context, cfg *koanf.Koanf) error {
+func (c *RootHandlerComponent) Start(
+	_ context.Context,
+	cfg *koanf.Koanf,
+) error {
 	log := LogDependency.MustGet(c.di)
 	instance := InstanceDependency.MustGet(c.di)
 	authService := AuthServiceDependency.MustGet(c.di)
