@@ -3,7 +3,9 @@ package app
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log/slog"
+	"net/http"
 	"net/netip"
 	"os"
 
@@ -38,11 +40,17 @@ type Stopper interface {
 	Stop(ctx context.Context) error
 }
 
+type StarterStopper interface {
+	Starter
+	Stopper
+}
+
 var (
-	InstanceDependency  = DefineDependency[string]("instance")
-	SecretKeyDependency = DefineDependency[secret.Secret[[]byte]]("secret_key")
-	LogDependency       = DefineDependency[*slog.Logger]("log")
-	DBDependency        = DefineDependency[*sql.DB]("db")
+	InstanceDependency    = DefineDependency[string]("instance")
+	SecretKeyDependency   = DefineDependency[secret.Secret[[]byte]]("secret_key")
+	LogDependency         = DefineDependency[*slog.Logger]("log")
+	DBDependency          = DefineDependency[*sql.DB]("db")
+	RootHandlerDependency = DefineDependency[http.Handler]("handler")
 
 	UserRepositoryDependency = DefineDependency[repository.UserRepository](
 		"repository.user",
@@ -130,11 +138,61 @@ func (c *LogComponent) Start(_ context.Context, cfg *koanf.Koanf) error {
 	return nil
 }
 
+type RootHandlerComponent struct {
+	di *Container
+}
+
+func NewRootHandler(di *Container) *RootHandlerComponent {
+	return &RootHandlerComponent{di: di}
+}
+
+func (c *RootHandlerComponent) Start(_ context.Context, cfg *koanf.Koanf) error {
+	log := LogDependency.MustGet(c.di)
+	instance := InstanceDependency.MustGet(c.di)
+	authService := AuthServiceDependency.MustGet(c.di)
+	aclService := ACLServiceDependency.MustGet(c.di)
+	userService := UserServiceDependency.MustGet(c.di)
+	workspaceService := WorkspaceServiceDependency.MustGet(c.di)
+	secretService := SecretServiceDependency.MustGet(c.di)
+
+	h := rest.RootHandler(
+		log,
+		handler.NewAPIHandler(
+			handler.NewPingHandler(instance),
+			handler.NewAuthHandler(
+				log,
+				authService,
+				[]netip.Prefix{},
+			),
+			handler.NewUserHandler(
+				log,
+				userService,
+			),
+			handler.NewWorkspaceHandler(
+				log,
+				workspaceService,
+			),
+			handler.NewSecretHandler(
+				log,
+				aclService,
+				secretService,
+			),
+		),
+		authService,
+		apiConfig(cfg),
+	)
+
+	RootHandlerDependency.Set(c.di, h)
+
+	return nil
+}
+
 type ServerComponent struct {
 	di *Container
 
+	cfg    rest.ServerConfig
 	log    *slog.Logger
-	server *rest.Server
+	server *http.Server
 }
 
 func NewServer(di *Container) *ServerComponent {
@@ -147,53 +205,26 @@ func (c *ServerComponent) Start(ctx context.Context, cfg *koanf.Koanf) error {
 		return err
 	}
 
+	c.cfg = serverCfg
 	c.log = LogDependency.MustGet(c.di)
-	instance := InstanceDependency.MustGet(c.di)
-	authService := AuthServiceDependency.MustGet(c.di)
-	aclService := ACLServiceDependency.MustGet(c.di)
-	userService := UserServiceDependency.MustGet(c.di)
-	workspaceService := WorkspaceServiceDependency.MustGet(c.di)
-	secretService := SecretServiceDependency.MustGet(c.di)
 
-	h := rest.RootHandler(
+	server := rest.NewServer(
 		c.log,
-		handler.NewAPIHandler(
-			handler.NewPingHandler(instance),
-			handler.NewAuthHandler(
-				c.log,
-				authService,
-				[]netip.Prefix{},
-			),
-			handler.NewUserHandler(
-				c.log,
-				userService,
-			),
-			handler.NewWorkspaceHandler(
-				c.log,
-				workspaceService,
-			),
-			handler.NewSecretHandler(
-				c.log,
-				aclService,
-				secretService,
-			),
-		),
-		authService,
-		apiConfig(cfg),
+		RootHandlerDependency.MustGet(c.di),
+		serverCfg,
 	)
-
-	server := rest.NewServer(c.log, h, serverCfg)
 
 	c.server = server
 
 	go func() {
 		c.log.Info(
 			"starting http server",
-			slog.String("address", c.server.Addr()),
+			slog.String("address", c.server.Addr),
 		)
 
-		err := c.server.Serve()
-		if err != nil {
+		err := c.server.ListenAndServe()
+
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			PropagateFatalError(ctx, err)
 		}
 	}()
@@ -204,6 +235,14 @@ func (c *ServerComponent) Start(ctx context.Context, cfg *koanf.Koanf) error {
 func (c *ServerComponent) Stop(ctx context.Context) error {
 	if c.server != nil {
 		c.log.DebugContext(ctx, "shutting down http server")
+
+		if c.cfg.ShutdownTimeout > 0 {
+			var cancel context.CancelFunc
+
+			ctx, cancel = context.WithTimeout(ctx, c.cfg.ShutdownTimeout)
+
+			defer cancel()
+		}
 
 		return c.server.Shutdown(ctx)
 	}
@@ -257,7 +296,7 @@ func NewRepository(di *Container) *RepositoryComponent {
 	return &RepositoryComponent{di: di}
 }
 
-func (c *RepositoryComponent) Start(_ context.Context, cfg *koanf.Koanf) error {
+func (c *RepositoryComponent) Start(_ context.Context, _ *koanf.Koanf) error {
 	db := DBDependency.MustGet(c.di)
 
 	UserRepositoryDependency.Set(

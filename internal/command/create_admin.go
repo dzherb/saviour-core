@@ -21,11 +21,12 @@ type CreateAdminParams struct {
 }
 
 func CreateAdmin(
+	ctx context.Context,
 	cfgPaths []string,
 	params CreateAdminParams,
 ) error {
 	ctx, stop := signal.NotifyContext(
-		context.Background(),
+		ctx,
 		os.Interrupt,
 		syscall.SIGTERM,
 	)

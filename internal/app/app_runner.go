@@ -10,9 +10,9 @@ import (
 	"saviour/internal/infra/config"
 )
 
-func Run(cfgPaths []string) error {
+func Run(ctx context.Context, cfgPaths []string) error {
 	ctx, stop := signal.NotifyContext(
-		context.Background(),
+		ctx,
 		os.Interrupt,
 		syscall.SIGTERM,
 	)
@@ -39,6 +39,7 @@ func Run(cfgPaths []string) error {
 	userServiceComponent := NewUserService(di)
 	workspaceServiceComponent := NewWorkspaceService(di)
 	secretServiceComponent := NewSecretService(di)
+	rootHandlerComponent := NewRootHandler(di)
 	serverComponent := NewServer(di)
 
 	app := New(LogDependency.MustGet(di))
@@ -52,6 +53,7 @@ func Run(cfgPaths []string) error {
 		userServiceComponent,
 		workspaceServiceComponent,
 		secretServiceComponent,
+		rootHandlerComponent,
 		serverComponent,
 	)
 

@@ -93,6 +93,7 @@ func serverConfig(k *koanf.Koanf) (rest.ServerConfig, error) {
 		hostKey              = "server.host"
 		portKey              = "server.port"
 		readHeaderTimeoutKey = "server.read_header_timeout"
+		shutdownTimeoutKey   = "server.shutdown_timeout"
 	)
 
 	var cfg rest.ServerConfig
@@ -108,6 +109,7 @@ func serverConfig(k *koanf.Koanf) (rest.ServerConfig, error) {
 	}
 
 	cfg.ReadHeaderTimeout = k.Duration(readHeaderTimeoutKey)
+	cfg.ShutdownTimeout = k.Duration(shutdownTimeoutKey)
 
 	return cfg, nil
 }

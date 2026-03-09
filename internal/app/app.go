@@ -102,7 +102,7 @@ func (a *App) Fatal(err error) {
 func (a *App) start(ctx context.Context, cfg *koanf.Koanf) error {
 	startCtx := contextWithApp(ctx, a)
 
-	if a.cfg.StartupTimeout != 0 {
+	if a.cfg.StartupTimeout > 0 {
 		timeoutCtx, cancel := context.WithTimeout(
 			startCtx,
 			a.cfg.StartupTimeout,
@@ -125,7 +125,7 @@ func (a *App) start(ctx context.Context, cfg *koanf.Koanf) error {
 func (a *App) stop() error {
 	ctx := context.Background()
 
-	if a.cfg.ShutdownTimeout != 0 {
+	if a.cfg.ShutdownTimeout > 0 {
 		timeoutCtx, cancel := context.WithTimeout(ctx, a.cfg.ShutdownTimeout)
 
 		ctx = timeoutCtx
