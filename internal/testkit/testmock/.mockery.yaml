@@ -13,6 +13,7 @@ packages:
           structname: '{{.Mock}}DB'
       UserRepository:
       SessionRepository:
+      WorkspaceRepository:
   saviour/internal/service/auth:
     interfaces:
       Service:
