@@ -66,6 +66,46 @@ func (suite *APITestSuite) TestUser_CreateUser_OK() {
 	suite.Equal(response["username"], "test_user")
 }
 
+func (suite *APITestSuite) TestUser_CreateUser_UserAlreadyExists() {
+	w, r := suite.PreparedRecorderAndRequest(
+		http.MethodPost,
+		"/users",
+		map[string]any{
+			"username": "test_user",
+			"password": "password",
+		},
+		[]auth.Role{auth.AdminRole},
+	)
+
+	userService := testmock.NewMockUserService(suite.T())
+
+	userService.EXPECT().
+		CreateUser(
+			mock.Anything,
+			user.CreateUserParams{
+				Username: "test_user",
+				Password: "password",
+				IsAdmin:  false,
+			},
+		).
+		Return(
+			nil,
+			user.ErrUserAlreadyExists,
+		)
+
+	h := handler.APIHandler{
+		UserHandler: handler.NewUserHandler(
+			logger.Noop,
+			userService,
+		),
+	}
+
+	suite.ServeAPI(w, r, h)
+
+	suite.Require().Equal(http.StatusBadRequest, w.Code)
+	suite.Contains(w.Body.String(), api.UserAlreadyExistsErrorType)
+}
+
 func (suite *APITestSuite) TestUser_DeactivateUser_OK() {
 	userUUID := uuid.New()
 

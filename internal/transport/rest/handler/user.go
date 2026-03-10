@@ -39,6 +39,14 @@ func (h *UserHandler) CreateUser(
 		},
 	)
 	if err != nil {
+		if errors.Is(err, user.ErrUserAlreadyExists) {
+			return nil, api.NewErrorResponse(
+				http.StatusBadRequest,
+				api.UserAlreadyExistsErrorType,
+				"User already exists, try a different username",
+			)
+		}
+
 		h.log.ErrorContext(
 			r.Context(),
 			"unexpected error calling user service on CreateUser request",

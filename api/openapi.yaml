@@ -200,6 +200,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserResponse"
+        "400":
+          description: user already exists error response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAlreadyExistsErrorResponse"
         <<: [
           *validation-error-response,
           *authentication-error-response,
@@ -709,6 +715,18 @@ components:
                     - REFRESH_TOKEN_NOT_VALID
                     - REFRESH_TOKEN_EXPIRED
                   example: REFRESH_TOKEN_NOT_VALID
+
+    UserAlreadyExistsErrorResponse:
+      allOf:
+        - $ref: "#/components/schemas/ErrorResponse"
+        - type: object
+          properties:
+            error:
+              properties:
+                type:
+                  enum:
+                    - USER_ALREADY_EXISTS
+                  example: USER_ALREADY_EXISTS
 
     EntityNotFoundErrorResponse:
       allOf:

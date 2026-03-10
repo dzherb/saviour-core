@@ -36,7 +36,7 @@ func (s ServiceImpl) CreateUser(
 		return nil, err
 	}
 
-	return s.userRepo.CreateUser(
+	user, err := s.userRepo.CreateUser(
 		ctx,
 		repository.CreateUserParams{
 			Username:     params.Username,
@@ -44,6 +44,15 @@ func (s ServiceImpl) CreateUser(
 			IsAdmin:      params.IsAdmin,
 		},
 	)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserAlreadyExists) {
+			return nil, ErrUserAlreadyExists
+		}
+
+		return nil, err
+	}
+
+	return user, nil
 }
 
 func (s ServiceImpl) DeactivateUser(ctx context.Context, uuid uuid.UUID) error {

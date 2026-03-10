@@ -42,6 +42,10 @@ func (r *UserRepository) CreateUser(
 			},
 		)
 	if err != nil {
+		if isUniqueConstraintViolation(err) {
+			return nil, errors.Join(repository.ErrUserAlreadyExists, err)
+		}
+
 		return nil, err
 	}
 

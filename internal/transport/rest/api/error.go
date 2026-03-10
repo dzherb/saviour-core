@@ -25,6 +25,7 @@ const (
 	RefreshTokenNotValidErrorType ErrorType = "REFRESH_TOKEN_NOT_VALID"
 	RefreshTokenExpiredErrorType  ErrorType = "REFRESH_TOKEN_EXPIRED" //nolint:gosec,lll
 	AccessForbiddenErrorType      ErrorType = "ACCESS_FORBIDDEN"
+	UserAlreadyExistsErrorType    ErrorType = "USER_ALREADY_EXISTS"
 )
 
 type errorResponse interface {

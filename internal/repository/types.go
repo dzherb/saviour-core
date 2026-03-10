@@ -41,7 +41,8 @@ type UserRepository interface {
 }
 
 var (
-	ErrUserNotFound = errors.New("user not found")
+	ErrUserNotFound      = errors.New("user not found")
+	ErrUserAlreadyExists = errors.New("user already exists")
 )
 
 type CreateUserParams struct {

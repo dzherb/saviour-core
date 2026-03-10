@@ -47,6 +47,10 @@ actions:
         allOf:
           - type: object
             x-go-type: ErrorResponse
+      UserAlreadyExistsErrorResponse:
+        allOf:
+          - type: object
+            x-go-type: ErrorResponse
       EntityNotFoundErrorResponse:
         allOf:
           - type: object
